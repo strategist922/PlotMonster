@@ -14,7 +14,7 @@ namespace chia_plotter
     {
         static async Task Main(string[] args)
         {
-            var testing = true;
+            var testing = false;
             var repo = new ChiaPlotProcessRepository();
             try
             {
@@ -96,9 +96,12 @@ namespace chia_plotter
                     {
                         try
                         {
-                            if (Directory.Exists(Path.Combine(tempDrive, ".Trash-1000")))
+                            if (!testing)
                             {
-                                Directory.Delete(Path.Combine(tempDrive, ".Trash-1000"), true);
+                                if (Directory.Exists(Path.Combine(tempDrive, ".Trash-1000")))
+                                {
+                                    Directory.Delete(Path.Combine(tempDrive, ".Trash-1000"), true);
+                                }
                             }
                         }
                         catch(Exception ex) 

@@ -170,11 +170,11 @@ namespace chia_plotter.Business.Infrastructure
             }
         }
 
-        private Task<Channel<ChiaPlotOutput>> startProcess(string destination, string temp) 
+        private async Task<Channel<ChiaPlotOutput>> startProcess(string destination, string temp) 
         {
             var destinationDrive = new DriveInfo(destination);
             var tempDrive = new DriveInfo(temp);
-            tempDriveCleanerDelegate.Invoke(temp);
+            await tempDriveCleanerDelegate.Invoke(temp);
             ChiaPlotEngine engine = null;
             foreach(var kSize in chiaPlotManagerContextConfiguration.KSizes) 
             {
@@ -188,21 +188,21 @@ namespace chia_plotter.Business.Infrastructure
                         kSize.Threads.ToString(),
                         processRepo
                     ));
-                    return engine.Process();
+                    return await engine.Process();
                 }
                 else
                 {
                     if (destinationDrive.AvailableFreeSpace > kSize.PlotSize)
                     {
                         var channel = Channel.CreateBounded<ChiaPlotOutput>(1); 
-                        channel.Writer.WriteAsync(new ChiaPlotOutput { InvalidDrive = destination }); 
-                        return Task.FromResult(channel);
+                        await channel.Writer.WriteAsync(new ChiaPlotOutput { InvalidDrive = destination }); 
+                        return channel;
                     }
                     else if (tempDrive.AvailableFreeSpace > kSize.WorkSize)
                     {
                         var channel = Channel.CreateBounded<ChiaPlotOutput>(1); 
-                        channel.Writer.WriteAsync(new ChiaPlotOutput { InvalidDrive = temp }); 
-                        return Task.FromResult(channel);
+                        await channel.Writer.WriteAsync(new ChiaPlotOutput { InvalidDrive = temp }); 
+                        return channel;
                     }
                 }
             }
