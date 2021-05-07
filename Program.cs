@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using chia_plotter.Business.Abstraction;
@@ -13,7 +14,7 @@ namespace chia_plotter
     {
         static async Task Main(string[] args)
         {
-            var testing = true;
+            var testing = false;
             var repo = new ChiaPlotProcessRepository();
             try
             {
@@ -90,6 +91,24 @@ namespace chia_plotter
                         var averageTime = TimeSpan.FromSeconds(avg.Any() ? avg.Average(timespan => timespan.TotalSeconds) : 0);
                         Console.WriteLine($"Completed: {outputs.Where(o => o.IsTransferComplete).Count()} plots with and average time of {averageTime.Hours}:{averageTime.Minutes}:{averageTime.Seconds}");
                         Console.WriteLine(staticTextStringBuilder.ToString());
+                    },
+                    tempDrive => 
+                    {
+                        try
+                        {
+                            if (Directory.Exists(Path.Combine(tempDrive, ".Trash-1000")))
+                            {
+                                Directory.Delete(Path.Combine(tempDrive, ".Trash-1000"), true);
+                            }
+                        }
+                        catch(Exception ex) 
+                        {
+                            // do we care?
+                            Console.WriteLine($"Exception");
+                            Console.WriteLine(ex.Message);
+                            Console.WriteLine(ex.StackTrace);
+                        }
+                        return Task.CompletedTask;
                     }
                 );
                 await manager.Process();

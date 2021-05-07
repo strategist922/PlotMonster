@@ -17,19 +17,22 @@ namespace chia_plotter.Business.Infrastructure
         private readonly ChiaPlotManagerContextConfiguration chiaPlotManagerContextConfiguration;
         private readonly Func<string, string, string, string, string, ChiaPlotProcessRepository, IChiaPlotProcessChannel> chiaPlotProcessChannelFactory;
         private readonly Action<ICollection<ChiaPlotOutput>, StringBuilder> allOutputsDelegate;
+        private readonly Func<string, Task> tempDriveCleanerDelegate;
 
         private readonly ChiaPlotProcessRepository processRepo;
         public ChiaPlotsManager(
             ChiaPlotManagerContextConfiguration chiaPlotManagerContextConfiguration, 
             ChiaPlotProcessRepository processRepo,
             Func<string, string, string, string, string, ChiaPlotProcessRepository, IChiaPlotProcessChannel> chiaPlotProcessChannelFactory,
-            Action<ICollection<ChiaPlotOutput>, StringBuilder> allOutputsDelegate
+            Action<ICollection<ChiaPlotOutput>, StringBuilder> allOutputsDelegate,
+            Func<string, Task> tempDriveCleanerDelegate
             )
         {
             this.chiaPlotManagerContextConfiguration = chiaPlotManagerContextConfiguration;
             this.processRepo = processRepo;
             this.chiaPlotProcessChannelFactory = chiaPlotProcessChannelFactory;
             this.allOutputsDelegate = allOutputsDelegate;
+            this.tempDriveCleanerDelegate = tempDriveCleanerDelegate;
         }
 
         public async Task Process() 
@@ -171,6 +174,7 @@ namespace chia_plotter.Business.Infrastructure
         {
             var destinationDrive = new DriveInfo(destination);
             var tempDrive = new DriveInfo(temp);
+            tempDriveCleanerDelegate.Invoke(temp);
             ChiaPlotEngine engine = null;
             foreach(var kSize in chiaPlotManagerContextConfiguration.KSizes) 
             {
