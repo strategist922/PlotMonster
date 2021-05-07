@@ -1,7 +1,7 @@
 # PlotMonster
 Chia Plotter with the intention to fill up the remaining space on a drive starting at the biggest allowed k size and scaling down from there to fill the void.
 
-This is written in C# in Ubuntu.  This needs a couple change to work in Windows since the process is executed a bit differently.  
+This is written in C# in Ubuntu.  This needs a couple change to work in Windows since the plotting process is executed a bit differently.  
 
 Please check the project for more details on upcoming changes @ https://github.com/users/jacoblroberts/projects/1
 
