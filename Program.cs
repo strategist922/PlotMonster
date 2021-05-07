@@ -14,7 +14,7 @@ namespace chia_plotter
     {
         static async Task Main(string[] args)
         {
-            var testing = false;
+            var testing = true;
             var repo = new ChiaPlotProcessRepository();
             try
             {
