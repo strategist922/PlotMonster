@@ -6,7 +6,6 @@ using chia_plotter.ResourceAccess.Abstraction;
 
 namespace chia_plotter.Business.Infrastructure
 {
-    // this is where I clean it up so the engine listens to the chiaPlotEnumerable and return the clean model
     public class ChiaPlotEngine
     {
         private readonly IChiaPlotProcessChannel repository;
@@ -17,7 +16,7 @@ namespace chia_plotter.Business.Infrastructure
 
         public async Task<Channel<ChiaPlotOutput>> Process()
         {
-            var channel = await repository.Get(); //.Where(v => !string.IsNullOrWhiteSpace(v));
+            var channel = await repository.Get();
             var report = new ChiaPlotOutput();
             report.StartTime = DateTime.Now;
             var outputChannel = Channel.CreateUnbounded<ChiaPlotOutput>();

@@ -31,8 +31,7 @@ namespace chia_plotter.ResourceAccess.Infrastructure
             var channel = Channel.CreateUnbounded<string>();
             var random = new Random();
             var id = "abcd" + random.Next(1000000000, int.MaxValue);
-            // var process = new Process();
-           
+            
             await channel.Writer.WriteAsync($"TEMPDRIVE:{tempDrive}");
             await channel.Writer.WriteAsync($"DESTDRIVE:{destDrive}");
 
