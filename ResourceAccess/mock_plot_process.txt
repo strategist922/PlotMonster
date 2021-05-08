@@ -1,4 +1,4 @@
-plot: "03:15:13.664  chia.plotting.create_plots       : INFO     Memo: 95bffba9c3f21b29ecc1aebf159db15d07dbe639b7af51c18ae3b67fa887182a8d3f0cf8517248bde23924c1aa401126b11add1bcd9280a5e2a4e33c3dd0e3becc6ae140eabc715c70a2ab4b14633b7291b8e846fc03c710a169eeda6be9f4501dcaeff83391d99aae89f161878474b64e436216dc1923479f638063177055f9
+plot: "03:15:13.664  chia.plotting.create_plots       : INFO     Memo: 95bffba9c3f3f21b29e2cc1aebf159daf639b7af51c18ae3b6d7fa887182a8d3f0casdfa23924c1aa401126b11add1bcd9280a5e2a4e33c3dd0e3becc6ae140eabc715c70a2ab4b14633b7291b8e846fc03c710a169eeda6be9f4501dcaeff83391d99aae89f161878474b64e436216dc1923479f638063177055f9
 03:15:13.679  chia.plotting.create_plots       : INFO     Starting plot 30/50
 
 Starting plotting progress into temporary dirs: z:\temp and z:\temp2
@@ -833,7 +833,7 @@ table 1 new size: 3425184977
 Time for phase 2 = 3286.366 seconds. CPU (94.720%) Thu May  6 06:51:11 2021
 Wrote: 268
 
-Starting phase 3/4: Compression from tmp files into "z:\\temp2\\plot-k32-2021-05-06-03-15-ebff482bedeaa97a11a275e5f3ed32a1b34e37be0f129369bb781b1824697825.plot.2.tmp" ... Thu May  6 06:51:11 2021
+Starting phase 3/4: Compression from tmp files into "z:\\temp2\\plot-k32-2021-05-06-03-15-ebff482bedeaa97a11a275eded32ad444e37be0f129369bb781b1824697825.plot.2.tmp" ... Thu May  6 06:51:11 2021
 Compressing tables 1 and 2
         Bucket 0 uniform sort. Ram: 4.440GiB, u_sort min: 1.250GiB, qs min: 0.313GiB.
         Bucket 1 uniform sort. Ram: 4.440GiB, u_sort min: 1.250GiB, qs min: 0.313GiB.
@@ -2472,7 +2472,7 @@ Compressing tables 6 and 7
 Total compress table time: 1233.066 seconds. CPU (83.880%) Thu May  6 09:18:34 2021
 Time for phase 3 = 8842.472 seconds. CPU (82.290%) Thu May  6 09:18:34 2021
 
-Starting phase 4/4: Write Checkpoint tables into "z:\\temp2\\plot-k32-2021-05-06-03-15-ebff482bedeaa97a11a275e5f3ed32a1b34e37be0f129369bb781b1824697825.plot.2.tmp" ... Thu May  6 09:18:34 2021
+Starting phase 4/4: Write Checkpoint tables into "z:\\temp2\\plot-k32-2021-05-06-03-15-ebff482bedeaa97a11a275eded32ad444e37be0f129369bb781b1824697825.plot.2.tmp" ... Thu May  6 09:18:34 2021
         Starting to write C1 and C3 tables
         Bucket 0 uniform sort. Ram: 4.440GiB, u_sort min: 0.563GiB, qs min: 0.281GiB.
         Bucket 1 uniform sort. Ram: 4.440GiB, u_sort min: 0.563GiB, qs min: 0.281GiB.
@@ -2620,7 +2620,7 @@ Time for phase 4 = 650.713 seconds. CPU (80.800%) Thu May  6 09:29:24 2021
 Approximate working space used (without final file): 269.325 GiB
 Final File size: 101.345 GiB
 Total time = 22451.199 seconds. CPU (111.320%) Thu May  6 09:29:24 2021
-Copied final file from "z:\\temp2\\plot-k32-2021-05-06-03-15-ebff482bedeaa97a11a275e5f3ed32a1b34e37be0f129369bb781b1824697825.plot.2.tmp" to "g:\\plots\\plot-k32-2021-05-06-03-15-ebff482bedeaa97a11a275e5f3ed32a1b34e37be0f129369bb781b1824697825.plot.2.tmp"
+Copied final file from "z:\\temp2\\plot-k32-2021-05-06-03-15-ebff482bedeaa97a11a275eded32ad444e37be0f129369bb781b1824697825.plot.2.tmp" to "g:\\plots\\plot-k32-2021-05-06-03-15-ebff482bedeaa97a11a275e5f3ed32a1b34e37be0f129369bb781b1824697825.plot.2.tmp"
 Copy time = 476.970 seconds. CPU (11.350%) Thu May  6 09:37:21 2021
-Removed temp2 file "z:\\temp2\\plot-k32-2021-05-06-03-15-ebff482bedeaa97a11a275e5f3ed32a1b34e37be0f129369bb781b1824697825.plot.2.tmp"? 1
-Renamed final file from "g:\\plots\\plot-k32-2021-05-06-03-15-ebff482bedeaa97a11a275e5f3ed32a1b34e37be0f129369bb781b1824697825.plot.2.tmp" to "g:\\plots\\plot-k32-2021-05-06-03-15-ebff482bedeaa97a11a275e5f3ed32a1b34e37be0f129369bb781b1824697825.plot"
+Removed temp2 file "z:\\temp2\\plot-k32-2021-05-06-03-15-ebff482bedeaa97a11a275eded32ad444e37be0f129369bb781b1824697825.plot.2.tmp"? 1
+Renamed final file from "g:\\plots\\plot-k32-2021-05-06-03-15-ebff482bedeaa97a11a275eded32ad444e37be0f129369bb781b1824697825.plot.2.tmp" to "g:\\plots\\plot-k32-2021-05-06-03-15-ebff482bedeaa97a11a275e5f3ed32a1b34e37be0f129369bb781b1824697825.plot"
