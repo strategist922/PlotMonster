@@ -18,5 +18,6 @@ namespace chia_plotter.Business.Abstraction
         public string InvalidDrive {get;set;}
         public DateTime StartTime {get;set;}
         public TimeSpan Duration {get;set;}
+        public string TotalTime {get;set;}
     }
 }

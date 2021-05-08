@@ -1,36 +1,61 @@
 using System;
+using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using chia_plotter.Business.Abstraction;
 using chia_plotter.ResourceAccess.Abstraction;
+using chia_plotter.Utiltiy.Abstraction;
 
 namespace chia_plotter.Business.Infrastructure
 {
-    public class ChiaPlotEngine
+    public class ChiaPlotEngineContextConfiguration
+    {
+        public string TempDrive {get;set;}
+        public string DestinationDrive {get;set;}
+    }
+    public class ChiaPlotEngine : IChiaPlotEngine
     {
         private readonly IChiaPlotProcessChannel repository;
-        public ChiaPlotEngine(IChiaPlotProcessChannel repository)
+        private readonly IRunningTasksRepository tasksRepository;
+        private readonly ChiaPlotEngineContextConfiguration chiaPlotEngineContextConfiguration;
+        private readonly Func<ChiaPlotOutput, string, bool> tryMapOutputDelegate;
+        public ChiaPlotEngine(
+            IChiaPlotProcessChannel repository,
+            IRunningTasksRepository tasksRepository,
+            ChiaPlotEngineContextConfiguration chiaPlotEngineContextConfiguration,
+            Func<ChiaPlotOutput, string, bool> tryMapOutputDelegate
+            )
         {
             this.repository = repository;
+            this.tasksRepository = tasksRepository;
+            this.chiaPlotEngineContextConfiguration = chiaPlotEngineContextConfiguration;
+            this.tryMapOutputDelegate = tryMapOutputDelegate;
         }
 
-        public async Task<Channel<ChiaPlotOutput>> Process()
+        public async Task<Channel<ChiaPlotOutput>> ProcessAsync(CancellationToken cancellationToken)
         {
-            var channel = await repository.Get();
-            var report = new ChiaPlotOutput();
-            report.StartTime = DateTime.Now;
             var outputChannel = Channel.CreateUnbounded<ChiaPlotOutput>();
-            Task task = Task.Run(async () => {
+            await tasksRepository.AddTaskAsync(Task.Run(async () => {
+                var channel = await repository.GetAsync(cancellationToken);
+                var report = new ChiaPlotOutput();
+                report.StartTime = DateTime.Now;
+                report.TempDrive = chiaPlotEngineContextConfiguration.TempDrive;
+                report.DestinationDrive = chiaPlotEngineContextConfiguration.DestinationDrive;
                 await foreach(var line in channel.ReadAllAsync())
                 {
-                    if (line.IndexOf("TEMPDRIVE:") > -1)
-                    {
-                        report.TempDrive = line.Substring(10);
-                    }
-                    if (line.IndexOf("DESTDRIVE:") > -1)
-                    {
-                        report.DestinationDrive = line.Substring(10);
-                    }
+                    // if (line.IndexOf("TEMPDRIVE:") > -1)
+                    // {
+                    //     report.TempDrive = line.Substring(10);
+                    // }
+                    // if (line.IndexOf("DESTDRIVE:") > -1)
+                    // {
+                    //     report.DestinationDrive = line.Substring(10);
+                    // }
+                    // TODO - delegate this work so we can have versioned delegates to automatically switch over based on chia version.  Need a resource access service to get the version.  Change the engine to set that delegate based on the version.
+                    //     if we make the engine a factory where it injects in IEnumerable<IPlotOutputProcess<>>
+                    // this is just an IMapper<string, ChiaPlotOutput>
+                    // we create a mapper factory that return the mapper based on version (future enhancement)
+                    // now we can bring in the stuff from the manager to wrap this mapper
                     if (line.IndexOf("ID:") > -1)
                     {
                         report.Id = line.Substring(4);
@@ -40,82 +65,14 @@ namespace chia_plotter.Business.Infrastructure
                 }
                 await foreach(var line in channel.ReadAllAsync())
                 {
-                    if (report.IsTransferComplete == true) 
+                    
+
+                    if (tryMapOutputDelegate.Invoke(report, line))
                     {
                         await outputChannel.Writer.WriteAsync(report);
-                        break;
                     }
-                    report.Output = line;
-                    if (line.IndexOf("Final File size: ") > -1)
-                    {
-                        report.IsPlotComplete = true;
-                    }
-                    else if (line.IndexOf("Time for phase") > -1)
-                    {
-                        if (line.IndexOf("phase 1") > -1)
-                        {
-                            
-                        }
-                        else if (line.IndexOf("phase 2") > -1)
-                        {
-                            
-                        }
-                        else if (line.IndexOf("phase 3") > -1)
-                        {
-                            
-                        }
-                        else if (line.IndexOf("phase 4") > -1)
-                        {
-                            
-                        }
-                    }
-                    else if (line.IndexOf("Starting phase") > -1)
-                    {
-                        if (line.IndexOf("phase 1") > -1)
-                        {
-                            report.CurrentPhase = "1";
-                        }
-                        else if (line.IndexOf("phase 2") > -1)
-                        {
-                            report.CurrentPhase = "2";
-                        }
-                        else if (line.IndexOf("phase 3") > -1)
-                        {
-                            report.CurrentPhase = "3";
-                        }
-                        else if (line.IndexOf("phase 4") > -1)
-                        {
-                            report.CurrentPhase = "4";
-                        }
-                    }
-                    else if (line.IndexOf("Plot size is") > -1)
-                    {
-                        report.KSize = line.Substring(14);
-                    }
-                    else if (line.IndexOf("Buffer size is") > -1)
-                    {
-                        report.Ram = line.Substring(16);
-                    }
-                    else if (line.IndexOf("threads of stripe size") > -1)
-                    {
-                        report.Threads = line.Substring(6, 2);
-                    }
-                    else if (line.IndexOf("Total time =") > -1)
-                    {
-                        var totalTime = line.Substring(13);
-                        totalTime = totalTime.Substring(0, totalTime.IndexOf(" seconds"));
-                        
-                    }
-                    else if (line.IndexOf("Copy time =") > -1)
-                    {
-                        report.IsTransferComplete = true;
-                        report.Duration = DateTime.Now.Subtract(report.StartTime);
-                        var copyTime = line.Substring(12);
-                        report.CopyTime = copyTime.Substring(0, copyTime.IndexOf(" seconds"));
-                    }
-                    await outputChannel.Writer.WriteAsync(report);
                 }
-            });
+            }, cancellationToken), cancellationToken);
             return outputChannel;
         }
     }

@@ -19,7 +19,7 @@ namespace chia_plotter
             try
             {
                 var config = new ChiaPlotManagerContextConfiguration();
-                config.PlotsPerDrive = 2;
+                config.PlotsPerDrive = 3;
                 config.TempPlotDrives = new List<string>() 
                 { 
                     "/chia/plottemp1",
@@ -41,9 +41,9 @@ namespace chia_plotter
                 };
                 config.KSizes = new List<KSizeMetadata>
                 { 
-                    new KSizeMetadata { PlotSize = 408000000000, WorkSize = 1000000000, K = "34", Threads = 8, Ram = 15000 }, 
-                    new KSizeMetadata { PlotSize = 208000000000, WorkSize = 550000000, K = "33", Threads = 4, Ram = 10000 }, 
-                    new KSizeMetadata { PlotSize = 108000000000, WorkSize = 280000000, K = "32", Threads = 2, Ram = 5000 } 
+                    // new KSizeMetadata { PlotSize = 408000000000, WorkSize = 1000000000000, K = "34", Threads = 8, Ram = 15000 }, 
+                    new KSizeMetadata { PlotSize = 208000000000, WorkSize = 550000000000, K = "33", Threads = 4, Ram = 10000 }, 
+                    new KSizeMetadata { PlotSize = 108000000000, WorkSize = 280000000000, K = "32", Threads = 2, Ram = 5000 } 
                 };
             
                 var manager = new ChiaPlotsManager(
@@ -112,7 +112,102 @@ namespace chia_plotter
                             Console.WriteLine(ex.StackTrace);
                         }
                         return Task.CompletedTask;
-                    }
+                    },
+                    new ChiaPlotEngine(
+                        null,
+                        null,
+                        null,
+                        (output, line) =>
+                        {
+                            // if (output.IsTransferComplete == true) 
+                            // {
+                                //TODO how does the inside get us out of this loop?
+                            //     await outputChannel.Writer.WriteAsync(output);
+                            //     break;
+                            // }
+
+                            output.Output = line;
+                            if (string.IsNullOrEmpty(output.Id))
+                            {
+                                if (line.IndexOf("ID:") > -1)
+                                {
+                                    output.Id = line.Substring(4);
+                                    return true;
+                                }
+                                return false;
+                            }
+                            if (line.IndexOf("Final File size: ") > -1)
+                            {
+                                output.IsPlotComplete = true;
+                            }
+                            else if (line.IndexOf("Time for phase") > -1)
+                            {
+                                if (line.IndexOf("phase 1") > -1)
+                                {
+                                    
+                                }
+                                else if (line.IndexOf("phase 2") > -1)
+                                {
+                                    
+                                }
+                                else if (line.IndexOf("phase 3") > -1)
+                                {
+                                    
+                                }
+                                else if (line.IndexOf("phase 4") > -1)
+                                {
+                                    
+                                }
+                            }
+                            else if (line.IndexOf("Starting phase") > -1)
+                            {
+                                if (line.IndexOf("phase 1") > -1)
+                                {
+                                    output.CurrentPhase = "1";
+                                }
+                                else if (line.IndexOf("phase 2") > -1)
+                                {
+                                    output.CurrentPhase = "2";
+                                }
+                                else if (line.IndexOf("phase 3") > -1)
+                                {
+                                    output.CurrentPhase = "3";
+                                }
+                                else if (line.IndexOf("phase 4") > -1)
+                                {
+                                    output.CurrentPhase = "4";
+                                }
+                            }
+                            else if (line.IndexOf("Plot size is") > -1)
+                            {
+                                output.KSize = line.Substring(14);
+                            }
+                            else if (line.IndexOf("Buffer size is") > -1)
+                            {
+                                output.Ram = line.Substring(16);
+                            }
+                            else if (line.IndexOf("threads of stripe size") > -1)
+                            {
+                                output.Threads = line.Substring(6, 2);
+                            }
+                            else if (line.IndexOf("Total time =") > -1)
+                            {
+                                var totalTime = line.Substring(13);
+                                totalTime = totalTime.Substring(0, totalTime.IndexOf(" seconds"));
+                                output.TotalTime = totalTime;
+                            }
+                            else if (line.IndexOf("Copy time =") > -1)
+                            {
+                                output.IsTransferComplete = true;
+                                output.Duration = DateTime.Now.Subtract(output.StartTime);
+                                var copyTime = line.Substring(12);
+                                output.CopyTime = copyTime.Substring(0, copyTime.IndexOf(" seconds"));
+                            }
+                            return true;
+                        }
+
+                    )
+                    
                 );
                 await manager.Process();
             }

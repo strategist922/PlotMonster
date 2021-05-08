@@ -15,8 +15,16 @@ namespace chia_plotter.ResourceAccess.Infrastructure
         private readonly string ram;
         private readonly string threads;
         private readonly ChiaPlotProcessRepository processRepo;
+        private readonly IRunningTasksRepository runningTasksRepository;
 
-        public ChiaPlotProcessChannelMock(string tempDrive, string destDrive, string kSize, string ram, string threads, ChiaPlotProcessRepository processRepo)
+        public ChiaPlotProcessChannelMock(
+            string tempDrive, 
+            string destDrive, 
+            string kSize, 
+            string ram, 
+            string threads, 
+            ChiaPlotProcessRepository processRepo,
+            IRunningTasksRepository runningTasksRepository)
         {
             this.tempDrive = tempDrive;
             this.destDrive = destDrive;
@@ -24,19 +32,21 @@ namespace chia_plotter.ResourceAccess.Infrastructure
             this.ram = ram;
             this.threads = threads;
             this.processRepo = processRepo;
+            this.runningTasksRepository = runningTasksRepository;
         }
 
-        public async Task<ChannelReader<string>> Get()
+        public async Task<ChannelReader<string>> GetAsync(CancellationToken cancellationToken)
         {
             var channel = Channel.CreateUnbounded<string>();
-            var random = new Random();
-            var id = "abcd" + random.Next(1000000000, int.MaxValue);
             
-            await channel.Writer.WriteAsync($"TEMPDRIVE:{tempDrive}");
-            await channel.Writer.WriteAsync($"DESTDRIVE:{destDrive}");
-
-            Task task = Task.Run(async () =>
+            await runningTasksRepository.AddTaskAsync(Task.Run(async () =>
             {
+                var random = new Random();
+                var id = "abcd" + random.Next(1000000000, int.MaxValue);
+                
+                await channel.Writer.WriteAsync($"TEMPDRIVE:{tempDrive}");
+                await channel.Writer.WriteAsync($"DESTDRIVE:{destDrive}");
+
                 var file = Path.Combine(Directory.GetCurrentDirectory(), "ResourceAccess", "mock_plot_process.txt");
               
                 using (StreamReader reader = File.OpenText(file))
@@ -49,7 +59,7 @@ namespace chia_plotter.ResourceAccess.Infrastructure
                         Thread.Sleep(25);
                     }
                 }
-            });
+            }, cancellationToken), cancellationToken);
             return channel;
         }
 

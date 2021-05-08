@@ -4,6 +4,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using chia_plotter.Business.Abstraction;
@@ -18,14 +19,18 @@ namespace chia_plotter.Business.Infrastructure
         private readonly Func<string, string, string, string, string, ChiaPlotProcessRepository, IChiaPlotProcessChannel> chiaPlotProcessChannelFactory;
         private readonly Action<ICollection<ChiaPlotOutput>, StringBuilder> allOutputsDelegate;
         private readonly Func<string, Task> tempDriveCleanerDelegate;
+        private readonly IRunningTasksRepository runningTasksRepository;
 
         private readonly ChiaPlotProcessRepository processRepo;
+        private readonly IChiaPlotEngine chiaPlotEngine;
         public ChiaPlotsManager(
             ChiaPlotManagerContextConfiguration chiaPlotManagerContextConfiguration, 
             ChiaPlotProcessRepository processRepo,
+            IRunningTasksRepository runningTasksRepository,
             Func<string, string, string, string, string, ChiaPlotProcessRepository, IChiaPlotProcessChannel> chiaPlotProcessChannelFactory,
             Action<ICollection<ChiaPlotOutput>, StringBuilder> allOutputsDelegate,
-            Func<string, Task> tempDriveCleanerDelegate
+            Func<string, Task> tempDriveCleanerDelegate,
+            IChiaPlotEngine chiaPlotEngine
             )
         {
             this.chiaPlotManagerContextConfiguration = chiaPlotManagerContextConfiguration;
@@ -33,9 +38,11 @@ namespace chia_plotter.Business.Infrastructure
             this.chiaPlotProcessChannelFactory = chiaPlotProcessChannelFactory;
             this.allOutputsDelegate = allOutputsDelegate;
             this.tempDriveCleanerDelegate = tempDriveCleanerDelegate;
+            this.runningTasksRepository = runningTasksRepository;
+            this.chiaPlotEngine = chiaPlotEngine;
         }
 
-        public async Task Process() 
+        public async Task ProcessAsync(CancellationToken cancellationToken) 
         {
             var currentDestinationIndex = 0;
             var uniqueOutputs = new Dictionary<string, ChiaPlotOutput>();
@@ -59,7 +66,7 @@ namespace chia_plotter.Business.Infrastructure
                 }
                 foreach(var dest in destinations) 
                 {
-                    var process = await startProcess(dest, tempDrive);
+                    var process = await startProcessAsync(dest, tempDrive, cancellationToken);
                     if (process != null)
                     {
                         var first = await process.Reader.ReadAsync();
@@ -124,7 +131,7 @@ namespace chia_plotter.Business.Infrastructure
 
                         if (startNewProcess)
                         {
-                            var process = await startProcess(output.DestinationDrive, output.TempDrive);
+                            var process = await startProcessAsync(output.DestinationDrive, output.TempDrive, cancellationToken);
                             var first = await process.Reader.ReadAsync();
                             if (!string.IsNullOrWhiteSpace(first.InvalidDrive)) 
                             {
@@ -170,7 +177,7 @@ namespace chia_plotter.Business.Infrastructure
             }
         }
 
-        private async Task<Channel<ChiaPlotOutput>> startProcess(string destination, string temp) 
+        private async Task<Channel<ChiaPlotOutput>> startProcessAsync(string destination, string temp, CancellationToken cancellationToken) 
         {
             var destinationDrive = new DriveInfo(destination);
             var tempDrive = new DriveInfo(temp);
@@ -187,8 +194,8 @@ namespace chia_plotter.Business.Infrastructure
                         kSize.Ram.ToString(),
                         kSize.Threads.ToString(),
                         processRepo
-                    ));
-                    return await engine.Process();
+                    ), runningTasksRepository);
+                    return await engine.ProcessAsync(cancellationToken);
                 }
                 else
                 {
