@@ -4,9 +4,9 @@ using System.Threading.Tasks;
 
 namespace chia_plotter.ResourceAccess.Abstraction
 {
-    public interface IChiaPlotProcessChannel
+    public interface IProcessResourceAccess
     {
-        Task<ChannelReader<string>> GetAsync(CancellationToken cancellationToken);
+        Task CreateAsync(CancellationToken cancellationToken);
     }
     
 }

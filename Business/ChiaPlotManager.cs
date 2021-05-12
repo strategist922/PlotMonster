@@ -13,7 +13,7 @@ using chia_plotter.ResourceAccess.Infrastructure;
 
 namespace chia_plotter.Business.Infrastructure
 {
-    public class ChiaPlotsManager
+    public class ChiaPlotManager : IChiaPlotManager
     {
         private readonly ChiaPlotManagerContextConfiguration chiaPlotManagerContextConfiguration;
         private readonly Func<string, string, string, string, string, ChiaPlotProcessRepository, IChiaPlotProcessChannel> chiaPlotProcessChannelFactory;
@@ -23,14 +23,22 @@ namespace chia_plotter.Business.Infrastructure
 
         private readonly ChiaPlotProcessRepository processRepo;
         private readonly IChiaPlotEngine chiaPlotEngine;
-        public ChiaPlotsManager(
+
+        public ChiaPlotManager(IChiaPlotEngine chiaPlotEngine)
+        {
+            this.chiaPlotEngine = chiaPlotEngine;
+        }
+
+        public ChiaPlotManager(
             ChiaPlotManagerContextConfiguration chiaPlotManagerContextConfiguration, 
             ChiaPlotProcessRepository processRepo,
             IRunningTasksRepository runningTasksRepository,
             Func<string, string, string, string, string, ChiaPlotProcessRepository, IChiaPlotProcessChannel> chiaPlotProcessChannelFactory,
             Action<ICollection<ChiaPlotOutput>, StringBuilder> allOutputsDelegate,
             Func<string, Task> tempDriveCleanerDelegate,
-            IChiaPlotEngine chiaPlotEngine
+            IChiaPlotEngine chiaPlotEngine,
+            IAsyncEnumerable<string> input,
+            Action<string> output
             )
         {
             this.chiaPlotManagerContextConfiguration = chiaPlotManagerContextConfiguration;
@@ -42,8 +50,25 @@ namespace chia_plotter.Business.Infrastructure
             this.chiaPlotEngine = chiaPlotEngine;
         }
 
-        public async Task ProcessAsync(CancellationToken cancellationToken) 
+        public Task ProcessAsync(CancellationToken cancellationToken)
         {
+            return chiaPlotEngine.ProcessAsync(cancellationToken);
+        }
+
+        public async Task ProcessXAsync(CancellationToken cancellationToken) 
+        {
+            //data flow
+            //process -> output
+            //output stream
+            //  process output - emits a new string from the process stdout
+            //  mapper/filter - converts from process string to object
+            //  aggregator - outputs groups by unique id
+            // end of stream
+            //input stream
+            //start new process listener - the smart thing that can start new process when specific criteria is met
+            //GUI listener - outputs to the gui
+
+
             var currentDestinationIndex = 0;
             var uniqueOutputs = new Dictionary<string, ChiaPlotOutput>();
             var outputChannel = Channel.CreateUnbounded<ChiaPlotOutput>();

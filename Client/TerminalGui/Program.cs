@@ -8,7 +8,7 @@ using chia_plotter.Business.Abstraction;
 using chia_plotter.Business.Infrastructure;
 using chia_plotter.ResourceAccess.Infrastructure;
 
-namespace chia_plotter
+namespace chia_plotter.Client
 {
     class Program
     {
@@ -42,8 +42,8 @@ namespace chia_plotter
                 config.KSizes = new List<KSizeMetadata>
                 { 
                     // new KSizeMetadata { PlotSize = 408000000000, WorkSize = 1000000000000, K = "34", Threads = 8, Ram = 15000 }, 
-                    new KSizeMetadata { PlotSize = 208000000000, WorkSize = 550000000000, K = "33", Threads = 4, Ram = 10000 }, 
-                    new KSizeMetadata { PlotSize = 108000000000, WorkSize = 280000000000, K = "32", Threads = 2, Ram = 5000 } 
+                    new KSizeMetadata { PlotSize = 208000000000, WorkSize = 550000000000, K = "33", Threads = 4, Ram = 4000 }, 
+                    new KSizeMetadata { PlotSize = 108000000000, WorkSize = 280000000000, K = "32", Threads = 2, Ram = 2000 } 
                 };
             
                 var manager = new ChiaPlotsManager(

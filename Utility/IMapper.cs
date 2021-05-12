@@ -1,7 +1,7 @@
 namespace chia_plotter.Utiltiy.Abstraction
 {
-    public interface IMapper<TLeft, TRight, TOut>
+    public interface IMapper<TIn, TOut>
     {
-        TOut Map(TLeft input, TRight output);
+        TOut Map(TIn input);
     }
 }

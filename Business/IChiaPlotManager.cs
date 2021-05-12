@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 
 namespace chia_plotter.Business.Abstraction
 {
-    public interface IChiaPlotEngine
+    public interface IChiaPlotManager
     {
         Task ProcessAsync(CancellationToken cancellationToken);
     }
