@@ -43,6 +43,8 @@ namespace chia_plotter.Business.Infrastructure
             var ignoredDrives = new List<string>();
             var staticText = new StringBuilder();
             // initialization process to start 2 plots per temp drive
+            // don't ignore plot drives but do check plot drives are not on the ignoreDrives list.  This will allow us to have the same temp and dest drive and ignore when full.
+
             foreach (var tempDrive in chiaPlotManagerContextConfiguration.TempPlotDrives) 
             {
                 var destinations = new List<string>();
@@ -57,14 +59,25 @@ namespace chia_plotter.Business.Infrastructure
                     destinations.Add(destination);
                     currentDestinationIndex++;
                 }
+                var innerForEachBreaker = false;
                 foreach(var dest in destinations) 
                 {
+                    if (innerForEachBreaker) 
+                    {
+                        continue;
+                    }
+
                     var process = await startProcess(dest, tempDrive);
                     if (process != null)
                     {
                         var first = await process.Reader.ReadAsync();
                         if (!string.IsNullOrWhiteSpace(first.InvalidDrive)) 
                         {
+                            if (first.InvalidDrive == tempDrive && tempDrive != dest) {
+                                innerForEachBreaker = true;
+                                continue;
+                            }
+
                             if(!ignoredDrives.Any(id => id == first.InvalidDrive))
                             {
                                 ignoredDrives.Add(first.InvalidDrive);
