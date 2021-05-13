@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using chia_plotter.Business.Abstraction;
 using chia_plotter.ResourceAccess.Abstraction;
 using chia_plotter.Utiltiy.Abstraction;
+using System.Linq.Async;
 
 namespace chia_plotter.Business.Infrastructure
 {
@@ -31,8 +32,10 @@ namespace chia_plotter.Business.Infrastructure
             this.processStarter = processStarter;
         }
 // this is the thing that makes the decisions to start a new process...  it can take in a IEnumerable of Func<ICollection<ChiaPlotOutput>, bool> decisionMakers
-        public Task ProcessAsync(CancellationToken cancellationToken)
+        public Task<IAsyncEnumerable<string>> ProcessAsync(CancellationToken cancellationToken)
         {
+inputChannel.Select()
+
             return Task.Run(async() =>
             {
                 await foreach(var chiaPlotOutputs in inputChannel)
