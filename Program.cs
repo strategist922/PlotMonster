@@ -14,7 +14,7 @@ namespace chia_plotter
     {
         static async Task Main(string[] args)
         {
-            var testing = false;
+            var testing = true;
             var repo = new ChiaPlotProcessRepository();
             try
             {
@@ -28,22 +28,29 @@ namespace chia_plotter
                 };
                 config.DestinationPlotDrives = new List<string>() 
                 { 
-                    "/chia/plots/100", 
-                    "/chia/plots/101", 
-                    "/chia/plots/102", 
-                    "/chia/plots/103", 
-                    "/chia/plots/104", 
-                    "/chia/plots/105", 
-                    "/chia/plots/106", 
-                    "/chia/plots/107", 
-                    "/chia/plots/108", 
-                    "/chia/plots/109" 
+                    // "/chia/plots/100", 
+                    // "/chia/plots/101", 
+                    // "/chia/plots/102", 
+                    // "/chia/plots/103", 
+                    // "/chia/plots/104", 
+                    // "/chia/plots/105", 
+                    // "/chia/plots/106", 
+                    // "/chia/plots/107", 
+                    // "/chia/plots/108", 
+                    // "/chia/plots/109" 
+                    "/chia/plots/200", 
+                    "/chia/plots/201",
+                    //  "/chia/plots/202", 
+                    // "/chia/plots/203",
+                    //  "/chia/plots/204",
+                    "/chia/plots/205",
+                    "/chia/plots/206",
                 };
                 config.KSizes = new List<KSizeMetadata>
                 { 
-                    new KSizeMetadata { PlotSize = 408000000000, WorkSize = 1000000000, K = "34", Threads = 8, Ram = 15000 }, 
-                    new KSizeMetadata { PlotSize = 208000000000, WorkSize = 550000000, K = "33", Threads = 4, Ram = 10000 }, 
-                    new KSizeMetadata { PlotSize = 108000000000, WorkSize = 280000000, K = "32", Threads = 2, Ram = 5000 } 
+                    new KSizeMetadata { PlotSize = 408000000000, WorkSize = 1000000000, K = "34", Threads = 4, Ram = 8000 }, 
+                    new KSizeMetadata { PlotSize = 208000000000, WorkSize = 550000000, K = "33", Threads = 4, Ram = 6000 }, 
+                    new KSizeMetadata { PlotSize = 108000000000, WorkSize = 280000000, K = "32", Threads = 2, Ram = 4000 } 
                 };
             
                 var manager = new ChiaPlotsManager(
