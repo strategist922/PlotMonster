@@ -1,0 +1,39 @@
+{
+    "TempDrives": [
+        "/chia/plottemp1",
+        "/chia/plottemp2", 
+        "/chia/plottemp3"
+    ],
+    "DestinationDrives": [
+        "/chia/plots/200", 
+        "/chia/plots/201", 
+        "/chia/plots/205", 
+        "/chia/plots/206"
+    ],
+    "PlotSizes": [
+        { 
+            "K": "34", 
+            "PlotSize": 408000000000, 
+            "WorkSize": 1000000000000, 
+            "Threads": 6, 
+            "Ram": 8000 
+        },
+        { 
+            "K": "33", 
+            "PlotSize": 208000000000, 
+            "WorkSize": 550000000000, 
+            "Threads": 4, 
+            "Ram": 4000 
+        },
+        { 
+            "K": "32", 
+            "PlotSize": 108000000000, 
+            "WorkSize": 280000000000, 
+            "Threads": 2, 
+            "Ram": 2000 
+        }
+    ],
+    "MaxParallelPlotsPerTempDrive": 2,
+    "StaggeredPlots": true,
+    "SystemType": "linux-x64"
+}

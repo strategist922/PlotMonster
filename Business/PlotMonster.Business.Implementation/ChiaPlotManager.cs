@@ -68,7 +68,7 @@ namespace chia_plotter.Business.Infrastructure
 
             await foreach(var outputs in chiaPlotOutputRepository.GetRunningProcesses(cancellationToken))
             {
-                var plotToStart = rulesEngine.ProcessAsync(outputs);
+                var plotToStart = rulesEngine.ProcessAsync(outputs, cancellationToken);
                 if (plotToStart != null)
                 {
                     await startPlotProcessAsync(plotToStart, cancellationToken);

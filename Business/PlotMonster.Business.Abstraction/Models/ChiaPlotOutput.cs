@@ -1,6 +1,6 @@
 using System;
 
-namespace chia_plotter.Business.Abstraction
+namespace PlotMonster.Business.Abstraction
 {
     public class ChiaPlotOutput
     {

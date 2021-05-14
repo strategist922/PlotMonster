@@ -1,7 +1,7 @@
 using System;
-using chia_plotter.Utiltiy.Abstraction;
+using Core.Utiltiy.Abstraction;
 
-namespace chia_plotter.Utiltiy.Implementation
+namespace Core.Utiltiy.Implementation
 {
     public class Mapper<TIn, TOut>: IMapper<TIn, TOut>
     {

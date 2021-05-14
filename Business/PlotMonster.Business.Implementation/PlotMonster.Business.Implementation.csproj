@@ -1,5 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\ResourceAccess\PlotMonster.ResourceAccess.Implementation\PlotMonster.ResourceAccess.Implementation.csproj" />
+    <ProjectReference Include="..\PlotMonster.Business.Abstraction\PlotMonster.Business.Abstraction.csproj" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
   </PropertyGroup>

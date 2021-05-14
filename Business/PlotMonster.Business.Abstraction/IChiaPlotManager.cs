@@ -1,7 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace chia_plotter.Business.Abstraction
+namespace PlotMonster.Business.Abstraction
 {
     public interface IChiaPlotManager
     {

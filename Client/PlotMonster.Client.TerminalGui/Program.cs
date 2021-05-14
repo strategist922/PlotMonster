@@ -14,6 +14,8 @@ namespace chia_plotter.Client
     {
         static async Task Main(string[] args)
         {
+            // TODO - DI, config (IConigurationManager will be needed when we change config)
+            //      input loop
             var testing = false;
             var repo = new ChiaPlotProcessRepository();
             try
