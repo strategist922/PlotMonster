@@ -70,6 +70,25 @@ namespace chia_plotter.Business.Infrastructure
                 await plotProcessStarter.Invoke(cancellationToken);
             }
 
+/*
+    ProcessAsync sequence of events 
+OLD
+ 1. get running chia plot process repo.  this outputs the process string
+ 2. map string to ChiaPlotOutput. how do we do this?  each output needs to do it, we don't aggregate it.  so this is a Explicit map class that 1) isolates the ugly mapping. 2) tracks a single ChiaPlotOutput. 3) is transient.
+ 3. aggregate all ChiaPlotOutput streams into a dictionary of unique ChiaPlotOutput.  we have this somewhere in a repo
+ 4. pass this unique ChiaPlotOutput list into the start plot process rules engine
+ 5. if we should start a new procees, 1) we do by calling the repo and to get the process. 2) then pass that into the input channel. (input channel is passed into this process, which is the output channel of the first repo we listen to in step 1)
+NEW
+ 1. listen to the unique list output repo, 
+ 2. pass that into the rules engine
+ 3. if rules engine is true, get a running chia plot process
+ 4. map from string to ChiaPlotOutput
+ 5. pass that into the unique outputs repo (this is where it is aggregated and output to the stream we listen to initially)
+
+ check the rules engine if we need to start a process
+2. 
+*/
+
             // if (rulesEngine.Process(cancellationToken) == true)
             // {
             //     await chiaPlotEngine.ProcessAsync(cancellationToken);
