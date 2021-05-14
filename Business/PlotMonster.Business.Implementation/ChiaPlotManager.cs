@@ -85,8 +85,9 @@ NEW
  4. map from string to ChiaPlotOutput
  5. pass that into the unique outputs repo (this is where it is aggregated and output to the stream we listen to initially)
 
- check the rules engine if we need to start a process
-2. 
+IOptionsMonitor<T> - use this to get config changes.  used to do things like list of temp, dest drives...
+still need ability to pass commands like kill ID 
+    can read each input and then output it, like a fake cursor.  the input even would need to trigger a redraw, which would be a listener on the client draw stuff
 */
 
             // if (rulesEngine.Process(cancellationToken) == true)
