@@ -8,13 +8,11 @@ namespace PlotMonster.Client.Feature
 {
     public static class ChiaPlotFeature
     {
-        public static void AddRequiredFeatures(this string serviceCollection)
-        {
-            serviceCollection.AddScoped<IMapper<string, ChiaPlotOutput>, ChiaPlotOutputMapper>();
-        }
-
         public static void AddChiaPlotFeature(this IServiceCollection serviceCollection, Action<ChiaPlotterFeatureContextConfiguration> featureConfigDelegate)
         {
+            serviceCollection.TryAddScoped<IMapper<string, ChiaPlotOutput>, ChiaPlotOutputMapper>();
+            serviceCollection.TryAddScoped<IChiaPlotOutputRepository, ChiaPlotOutputRepository>();
+
             var featureConfig = new ChiaPlotterFeatureContextConfiguration();
             featureConfigDelegate.Invoke(featureConfig);
 

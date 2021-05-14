@@ -3,10 +3,9 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
-using chia_plotter.Business.Abstraction;
-using chia_plotter.Business.Infrastructure;
-using chia_plotter.ResourceAccess.Infrastructure;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace chia_plotter.Client
 {
@@ -17,205 +16,215 @@ namespace chia_plotter.Client
             // TODO - DI, config (IConigurationManager will be needed when we change config)
             //      input loop
             var testing = false;
-            var repo = new ChiaPlotProcessRepository();
+            var cancellationTokenSource = new CancellationTokenSource();
+            // var repo = new ChiaPlotProcessRepository();
             try
             {
-                var config = new ChiaPlotManagerContextConfiguration();
-                config.PlotsPerDrive = 3;
-                config.TempPlotDrives = new List<string>() 
-                { 
-                    "/chia/plottemp1",
-                    "/chia/plottemp2", 
-                    "/chia/plottemp3"
-                };
-                config.DestinationPlotDrives = new List<string>() 
-                { 
-                    "/chia/plots/100", 
-                    "/chia/plots/101", 
-                    "/chia/plots/102", 
-                    "/chia/plots/103", 
-                    "/chia/plots/104", 
-                    "/chia/plots/105", 
-                    "/chia/plots/106", 
-                    "/chia/plots/107", 
-                    "/chia/plots/108", 
-                    "/chia/plots/109" 
-                };
-                config.KSizes = new List<KSizeMetadata>
-                { 
-                    // new KSizeMetadata { PlotSize = 408000000000, WorkSize = 1000000000000, K = "34", Threads = 8, Ram = 15000 }, 
-                    new KSizeMetadata { PlotSize = 208000000000, WorkSize = 550000000000, K = "33", Threads = 4, Ram = 4000 }, 
-                    new KSizeMetadata { PlotSize = 108000000000, WorkSize = 280000000000, K = "32", Threads = 2, Ram = 2000 } 
-                };
+                var serviceProvider = new ServiceCollection()
+                    .AddChiaPlotFeature()
+                    .AddChiaPlotsOutputFeature()
+                    .BuildServiceProvider();
+                
+                var chiaPlotterTask = serviceProvider.GetRequiredService<IChiaPlotManager>().ProcessAsync(cancellationTokenSource.Token);
+                var chiaPlotOutputTask = serviceProvider.GetRequiredService<IChiaPlotsOutputManager>().ProcessAsync(cancellationTokenSource.Token);
+
+                await Task.WhenAll(new Task[] { chiaPlotterTask, chiaPlotOutputTask });
+            //     var config = new ChiaPlotManagerContextConfiguration();
+            //     config.PlotsPerDrive = 3;
+            //     config.TempPlotDrives = new List<string>() 
+            //     { 
+            //         "/chia/plottemp1",
+            //         "/chia/plottemp2", 
+            //         "/chia/plottemp3"
+            //     };
+            //     config.DestinationPlotDrives = new List<string>() 
+            //     { 
+            //         "/chia/plots/100", 
+            //         "/chia/plots/101", 
+            //         "/chia/plots/102", 
+            //         "/chia/plots/103", 
+            //         "/chia/plots/104", 
+            //         "/chia/plots/105", 
+            //         "/chia/plots/106", 
+            //         "/chia/plots/107", 
+            //         "/chia/plots/108", 
+            //         "/chia/plots/109" 
+            //     };
+            //     config.KSizes = new List<KSizeMetadata>
+            //     { 
+            //         // new KSizeMetadata { PlotSize = 408000000000, WorkSize = 1000000000000, K = "34", Threads = 8, Ram = 15000 }, 
+            //         new KSizeMetadata { PlotSize = 208000000000, WorkSize = 550000000000, K = "33", Threads = 4, Ram = 4000 }, 
+            //         new KSizeMetadata { PlotSize = 108000000000, WorkSize = 280000000000, K = "32", Threads = 2, Ram = 2000 } 
+            //     };
             
-                var manager = new ChiaPlotsManager(
-                    config, 
-                    repo, 
-                    (
-                        temp,
-                        destination,
-                        K,
-                        Ram,
-                        Threads,
-                        processRepo
-                    ) => {
-                        if (!testing) {
-                            return new ChiaPlotProcessChannel(temp, destination, K, Ram, Threads, processRepo);
-                        } else {
-                            return new ChiaPlotProcessChannelMock(temp, destination, K, Ram, Threads, processRepo);
-                        }
-                    },
-                    (outputs, staticTextStringBuilder) => 
-                    {
-                        var lmr = new List<ChiaPlotOutput>();
+            //     var manager = new ChiaPlotsManager(
+            //         config, 
+            //         repo, 
+            //         (
+            //             temp,
+            //             destination,
+            //             K,
+            //             Ram,
+            //             Threads,
+            //             processRepo
+            //         ) => {
+            //             if (!testing) {
+            //                 return new ChiaPlotProcessChannel(temp, destination, K, Ram, Threads, processRepo);
+            //             } else {
+            //                 return new ChiaPlotProcessChannelMock(temp, destination, K, Ram, Threads, processRepo);
+            //             }
+            //         },
+            //         (outputs, staticTextStringBuilder) => 
+            //         {
+            //             var lmr = new List<ChiaPlotOutput>();
 
-                        Console.Clear();
+            //             Console.Clear();
 
-                        Console.WriteLine(DateTime.Now.ToString("T").PadRight(50 * 3, '-'));
-                        foreach (var uniqueOutput in outputs.Where(o => o.IsTransferComplete == false)) 
-                        {                            
-                            lmr.Add(uniqueOutput);
+            //             Console.WriteLine(DateTime.Now.ToString("T").PadRight(50 * 3, '-'));
+            //             foreach (var uniqueOutput in outputs.Where(o => o.IsTransferComplete == false)) 
+            //             {                            
+            //                 lmr.Add(uniqueOutput);
                                                     
-                            if (lmr.Count == 3)
-                            {
-                                displayOutputs(lmr[0], lmr[1], lmr[2]);
-                                lmr.Clear();
-                            }
-                        }
-                        if (lmr.Count > 0) {
-                            while (lmr.Count != 3) {
-                                lmr.Add(new ChiaPlotOutput { Id = "..." });
-                            }
-                            displayOutputs(lmr[0], lmr[1], lmr[2]);
-                        }
-                        Console.WriteLine(string.Empty.PadRight(50 * 3, '-'), Color.BlueViolet);
-                        var avg = outputs.Where(o => o.IsTransferComplete && o.Duration != default).Select(o => o.Duration);
-                        var averageTime = TimeSpan.FromSeconds(avg.Any() ? avg.Average(timespan => timespan.TotalSeconds) : 0);
-                        Console.WriteLine($"Completed: {outputs.Where(o => o.IsTransferComplete).Count()} plots with and average time of {averageTime.Hours}:{averageTime.Minutes}:{averageTime.Seconds}");
-                        Console.WriteLine(staticTextStringBuilder.ToString());
-                    },
-                    tempDrive => 
-                    {
-                        try
-                        {
-                            if (!testing)
-                            {
-                                if (Directory.Exists(Path.Combine(tempDrive, ".Trash-1000")))
-                                {
-                                    Directory.Delete(Path.Combine(tempDrive, ".Trash-1000"), true);
-                                }
-                            }
-                        }
-                        catch(Exception ex) 
-                        {
-                            // do we care?
-                            Console.WriteLine($"Exception");
-                            Console.WriteLine(ex.Message);
-                            Console.WriteLine(ex.StackTrace);
-                        }
-                        return Task.CompletedTask;
-                    },
-                    new ChiaPlotEngine(
-                        null,
-                        null,
-                        null,
-                        (output, line) =>
-                        {
-                            // if (output.IsTransferComplete == true) 
-                            // {
-                                //TODO how does the inside get us out of this loop?
-                            //     await outputChannel.Writer.WriteAsync(output);
-                            //     break;
-                            // }
+            //                 if (lmr.Count == 3)
+            //                 {
+            //                     displayOutputs(lmr[0], lmr[1], lmr[2]);
+            //                     lmr.Clear();
+            //                 }
+            //             }
+            //             if (lmr.Count > 0) {
+            //                 while (lmr.Count != 3) {
+            //                     lmr.Add(new ChiaPlotOutput { Id = "..." });
+            //                 }
+            //                 displayOutputs(lmr[0], lmr[1], lmr[2]);
+            //             }
+            //             Console.WriteLine(string.Empty.PadRight(50 * 3, '-'), Color.BlueViolet);
+            //             var avg = outputs.Where(o => o.IsTransferComplete && o.Duration != default).Select(o => o.Duration);
+            //             var averageTime = TimeSpan.FromSeconds(avg.Any() ? avg.Average(timespan => timespan.TotalSeconds) : 0);
+            //             Console.WriteLine($"Completed: {outputs.Where(o => o.IsTransferComplete).Count()} plots with and average time of {averageTime.Hours}:{averageTime.Minutes}:{averageTime.Seconds}");
+            //             Console.WriteLine(staticTextStringBuilder.ToString());
+            //         },
+            //         tempDrive => 
+            //         {
+            //             try
+            //             {
+            //                 if (!testing)
+            //                 {
+            //                     if (Directory.Exists(Path.Combine(tempDrive, ".Trash-1000")))
+            //                     {
+            //                         Directory.Delete(Path.Combine(tempDrive, ".Trash-1000"), true);
+            //                     }
+            //                 }
+            //             }
+            //             catch(Exception ex) 
+            //             {
+            //                 // do we care?
+            //                 Console.WriteLine($"Exception");
+            //                 Console.WriteLine(ex.Message);
+            //                 Console.WriteLine(ex.StackTrace);
+            //             }
+            //             return Task.CompletedTask;
+            //         },
+            //         new ChiaPlotEngine(
+            //             null,
+            //             null,
+            //             null,
+            //             (output, line) =>
+            //             {
+            //                 // if (output.IsTransferComplete == true) 
+            //                 // {
+            //                     //TODO how does the inside get us out of this loop?
+            //                 //     await outputChannel.Writer.WriteAsync(output);
+            //                 //     break;
+            //                 // }
 
-                            output.Output = line;
-                            if (string.IsNullOrEmpty(output.Id))
-                            {
-                                if (line.IndexOf("ID:") > -1)
-                                {
-                                    output.Id = line.Substring(4);
-                                    return true;
-                                }
-                                return false;
-                            }
-                            if (line.IndexOf("Final File size: ") > -1)
-                            {
-                                output.IsPlotComplete = true;
-                            }
-                            else if (line.IndexOf("Time for phase") > -1)
-                            {
-                                if (line.IndexOf("phase 1") > -1)
-                                {
+            //                 output.Output = line;
+            //                 if (string.IsNullOrEmpty(output.Id))
+            //                 {
+            //                     if (line.IndexOf("ID:") > -1)
+            //                     {
+            //                         output.Id = line.Substring(4);
+            //                         return true;
+            //                     }
+            //                     return false;
+            //                 }
+            //                 if (line.IndexOf("Final File size: ") > -1)
+            //                 {
+            //                     output.IsPlotComplete = true;
+            //                 }
+            //                 else if (line.IndexOf("Time for phase") > -1)
+            //                 {
+            //                     if (line.IndexOf("phase 1") > -1)
+            //                     {
                                     
-                                }
-                                else if (line.IndexOf("phase 2") > -1)
-                                {
+            //                     }
+            //                     else if (line.IndexOf("phase 2") > -1)
+            //                     {
                                     
-                                }
-                                else if (line.IndexOf("phase 3") > -1)
-                                {
+            //                     }
+            //                     else if (line.IndexOf("phase 3") > -1)
+            //                     {
                                     
-                                }
-                                else if (line.IndexOf("phase 4") > -1)
-                                {
+            //                     }
+            //                     else if (line.IndexOf("phase 4") > -1)
+            //                     {
                                     
-                                }
-                            }
-                            else if (line.IndexOf("Starting phase") > -1)
-                            {
-                                if (line.IndexOf("phase 1") > -1)
-                                {
-                                    output.CurrentPhase = "1";
-                                }
-                                else if (line.IndexOf("phase 2") > -1)
-                                {
-                                    output.CurrentPhase = "2";
-                                }
-                                else if (line.IndexOf("phase 3") > -1)
-                                {
-                                    output.CurrentPhase = "3";
-                                }
-                                else if (line.IndexOf("phase 4") > -1)
-                                {
-                                    output.CurrentPhase = "4";
-                                }
-                            }
-                            else if (line.IndexOf("Plot size is") > -1)
-                            {
-                                output.KSize = line.Substring(14);
-                            }
-                            else if (line.IndexOf("Buffer size is") > -1)
-                            {
-                                output.Ram = line.Substring(16);
-                            }
-                            else if (line.IndexOf("threads of stripe size") > -1)
-                            {
-                                output.Threads = line.Substring(6, 2);
-                            }
-                            else if (line.IndexOf("Total time =") > -1)
-                            {
-                                var totalTime = line.Substring(13);
-                                totalTime = totalTime.Substring(0, totalTime.IndexOf(" seconds"));
-                                output.TotalTime = totalTime;
-                            }
-                            else if (line.IndexOf("Copy time =") > -1)
-                            {
-                                output.IsTransferComplete = true;
-                                output.Duration = DateTime.Now.Subtract(output.StartTime);
-                                var copyTime = line.Substring(12);
-                                output.CopyTime = copyTime.Substring(0, copyTime.IndexOf(" seconds"));
-                            }
-                            return true;
-                        }
+            //                     }
+            //                 }
+            //                 else if (line.IndexOf("Starting phase") > -1)
+            //                 {
+            //                     if (line.IndexOf("phase 1") > -1)
+            //                     {
+            //                         output.CurrentPhase = "1";
+            //                     }
+            //                     else if (line.IndexOf("phase 2") > -1)
+            //                     {
+            //                         output.CurrentPhase = "2";
+            //                     }
+            //                     else if (line.IndexOf("phase 3") > -1)
+            //                     {
+            //                         output.CurrentPhase = "3";
+            //                     }
+            //                     else if (line.IndexOf("phase 4") > -1)
+            //                     {
+            //                         output.CurrentPhase = "4";
+            //                     }
+            //                 }
+            //                 else if (line.IndexOf("Plot size is") > -1)
+            //                 {
+            //                     output.KSize = line.Substring(14);
+            //                 }
+            //                 else if (line.IndexOf("Buffer size is") > -1)
+            //                 {
+            //                     output.Ram = line.Substring(16);
+            //                 }
+            //                 else if (line.IndexOf("threads of stripe size") > -1)
+            //                 {
+            //                     output.Threads = line.Substring(6, 2);
+            //                 }
+            //                 else if (line.IndexOf("Total time =") > -1)
+            //                 {
+            //                     var totalTime = line.Substring(13);
+            //                     totalTime = totalTime.Substring(0, totalTime.IndexOf(" seconds"));
+            //                     output.TotalTime = totalTime;
+            //                 }
+            //                 else if (line.IndexOf("Copy time =") > -1)
+            //                 {
+            //                     output.IsTransferComplete = true;
+            //                     output.Duration = DateTime.Now.Subtract(output.StartTime);
+            //                     var copyTime = line.Substring(12);
+            //                     output.CopyTime = copyTime.Substring(0, copyTime.IndexOf(" seconds"));
+            //                 }
+            //                 return true;
+            //             }
 
-                    )
+            //         )
                     
-                );
-                var runningTask = manager.Process();
-                while (runningTask.IsRunning)
-                {
-                    // this is where we will putput and listen for input
-                }
+            //     );
+            //     var runningTask = manager.Process();
+            //     while (runningTask.IsRunning)
+            //     {
+            //         // this is where we will putput and listen for input
+            //     }
             }
             catch(Exception ex) 
             {
