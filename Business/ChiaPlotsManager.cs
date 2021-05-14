@@ -42,11 +42,14 @@ namespace chia_plotter.Business.Infrastructure
             var outputChannel = Channel.CreateUnbounded<ChiaPlotOutput>();
             var ignoredDrives = new List<string>();
             var staticText = new StringBuilder();
+            var maxParallelPlotsPerStagger = 1;
             // initialization process to start 2 plots per temp drive
+            // don't ignore plot drives but do check plot drives are not on the ignoreDrives list.  This will allow us to have the same temp and dest drive and ignore when full.
+// where do I add the logic to stagger?
             foreach (var tempDrive in chiaPlotManagerContextConfiguration.TempPlotDrives) 
             {
                 var destinations = new List<string>();
-                while (destinations.Count != chiaPlotManagerContextConfiguration.PlotsPerDrive)
+                while (destinations.Count < maxParallelPlotsPerStagger)
                 {
                     var destination = chiaPlotManagerContextConfiguration.DestinationPlotDrives.Skip(currentDestinationIndex).FirstOrDefault();
                     if (destination == null)
@@ -57,14 +60,25 @@ namespace chia_plotter.Business.Infrastructure
                     destinations.Add(destination);
                     currentDestinationIndex++;
                 }
+                var innerForEachBreaker = false;
                 foreach(var dest in destinations) 
                 {
+                    if (innerForEachBreaker) 
+                    {
+                        continue;
+                    }
+
                     var process = await startProcess(dest, tempDrive);
                     if (process != null)
                     {
                         var first = await process.Reader.ReadAsync();
                         if (!string.IsNullOrWhiteSpace(first.InvalidDrive)) 
                         {
+                            if (first.InvalidDrive == tempDrive && tempDrive != dest) {
+                                innerForEachBreaker = true;
+                                continue;
+                            }
+
                             if(!ignoredDrives.Any(id => id == first.InvalidDrive))
                             {
                                 ignoredDrives.Add(first.InvalidDrive);
@@ -116,7 +130,9 @@ namespace chia_plotter.Business.Infrastructure
                         var related = outputs.Where(o => o.TempDrive == output.TempDrive);
                         var completed = related.Where(o => o.IsPlotComplete);
                         var remaining = related.Where(o => !o.IsPlotComplete);
+                        
                         if (remaining.Count() < chiaPlotManagerContextConfiguration.PlotsPerDrive
+                            && remaining.Where(o => string.IsNullOrWhiteSpace(o.CurrentPhase) || (o.CurrentPhase == "1" || o.CurrentPhase == "2")).Count() < maxParallelPlotsPerStagger
                             && completed.Where(c => c.IsTransferComplete == false).Count() < 2)
                         {
                             startNewProcess = true;
