@@ -209,7 +209,11 @@ namespace chia_plotter.Client
                     )
                     
                 );
-                await manager.Process();
+                var runningTask = manager.Process();
+                while (runningTask.IsRunning)
+                {
+                    // this is where we will putput and listen for input
+                }
             }
             catch(Exception ex) 
             {

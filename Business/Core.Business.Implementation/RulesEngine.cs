@@ -9,12 +9,12 @@ namespace Core.Business.Implementation
         {
             rules = rules;
         }
-        public IAsyncEnumerable<bool> ProcessAsync(IAsyncEnumerable<T> inputChannel, CancellationToken cancellationToken)
+        public IAsyncEnumerable<T> ProcessAsync(IAsyncEnumerable<T> inputChannel, CancellationToken cancellationToken)
         {
             // can add optimization by returning the previous value 
             return inputChannel.SelectAsync(i => 
             {
-                return rules.Select(r => r.Invoke(i)).FirstOrDefault(false);
+                return rules.Where(r => r.Invoke(i)).FirstOrDefault(default(T));
             });
         }
     }
