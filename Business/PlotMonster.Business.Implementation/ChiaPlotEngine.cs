@@ -34,10 +34,7 @@ namespace chia_plotter.Business.Infrastructure
 // this is the thing that makes the decisions to start a new process...  it can take in a IEnumerable of Func<ICollection<ChiaPlotOutput>, bool> decisionMakers
         public Task<IAsyncEnumerable<string>> ProcessAsync(CancellationToken cancellationToken)
         {
-inputChannel.Select()
-
-            return Task.Run(async() =>
-            {
+inputChannel.SelectAsync(async outputs => {
                 await foreach(var chiaPlotOutputs in inputChannel)
                 {
                     var plotToStart = decisionMakers.Select(d => d.Invoke(chiaPlotOutputs)).Where(d => d != null).Select(d => d.TempDrive).FirstOrDefault();

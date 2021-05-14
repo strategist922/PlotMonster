@@ -23,6 +23,9 @@ namespace chia_plotter.Business.Infrastructure
 
         private readonly ChiaPlotProcessRepository processRepo;
         private readonly IChiaPlotEngine chiaPlotEngine;
+        private readonly IRulesEngine rulesEngine;
+        private readonly IMapper<string, ChiaPlotOutput> chiaPlotOutputMapper;
+        private readonly Func<CancellationToken, Task> plotProcessStarter;
 
         public ChiaPlotManager(IChiaPlotEngine chiaPlotEngine)
         {
@@ -38,7 +41,10 @@ namespace chia_plotter.Business.Infrastructure
             Func<string, Task> tempDriveCleanerDelegate,
             IChiaPlotEngine chiaPlotEngine,
             IAsyncEnumerable<string> input,
-            Action<string> output
+            Action<string> output,
+            IRulesEngine rulesEngine,
+            IMapper<string, ChiaPlotOutput> chiaPlotOutputMapper,
+            Func<CancellationToken, Task> plotProcessStarter
             )
         {
             this.chiaPlotManagerContextConfiguration = chiaPlotManagerContextConfiguration;
@@ -48,11 +54,26 @@ namespace chia_plotter.Business.Infrastructure
             this.tempDriveCleanerDelegate = tempDriveCleanerDelegate;
             this.runningTasksRepository = runningTasksRepository;
             this.chiaPlotEngine = chiaPlotEngine;
+            this.rulesEngine = rulesEngine;
+            this.chiaPlotOutputMapper = chiaPlotOutputMapper;
+            this.plotProcessStarter = plotProcessStarter;
         }
 
-        public Task ProcessAsync(CancellationToken cancellationToken)
+        public async Task ProcessAsync(CancellationToken cancellationToken)
         {
-            return chiaPlotEngine.ProcessAsync(cancellationToken);
+           await foreach(var shouldStartProcess in rulesEngine.ProcessAsync(
+                processRepository.GetAsync(cancellationToken)
+                    .SelectAsync(processRepo => chiaPlotOutputMapper.Map(processRepo)),
+                cancellationToken)
+            ) 
+            {
+                await plotProcessStarter.Invoke(cancellationToken);
+            }
+
+            // if (rulesEngine.Process(cancellationToken) == true)
+            // {
+            //     await chiaPlotEngine.ProcessAsync(cancellationToken);
+            // }
         }
 
         public async Task ProcessXAsync(CancellationToken cancellationToken) 
@@ -94,6 +115,8 @@ namespace chia_plotter.Business.Infrastructure
                     var process = await startProcessAsync(dest, tempDrive, cancellationToken);
                     if (process != null)
                     {
+                        // this is the mapping from the return of the process repo
+                        // 
                         var first = await process.Reader.ReadAsync();
                         if (!string.IsNullOrWhiteSpace(first.InvalidDrive)) 
                         {
@@ -112,6 +135,7 @@ namespace chia_plotter.Business.Infrastructure
                                     break;
                                 }
                             }
+                            // not here though
                             Task task = Task.Run(async () => {
                                 await foreach(var value in process.Reader.ReadAllAsync())
                                 {
@@ -204,6 +228,8 @@ namespace chia_plotter.Business.Infrastructure
 
         private async Task<Channel<ChiaPlotOutput>> startProcessAsync(string destination, string temp, CancellationToken cancellationToken) 
         {
+            // this becomes a rule... well rules
+            // the engine is just a mapper from string to ChiaPlotOuput
             var destinationDrive = new DriveInfo(destination);
             var tempDrive = new DriveInfo(temp);
             await tempDriveCleanerDelegate.Invoke(temp);
