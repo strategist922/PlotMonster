@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\ResourceAccess\PlotMonster.ResourceAccess.Implementation\PlotMonster.ResourceAccess.Implementation.csproj" />
     <ProjectReference Include="..\PlotMonster.Business.Abstraction\PlotMonster.Business.Abstraction.csproj" />
+    <ProjectReference Include="..\Core.Business.Abstraction\Core.Business.Abstraction.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

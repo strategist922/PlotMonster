@@ -6,7 +6,7 @@ namespace PlotMonster.ResourceAccess.Abstraction
 {
     public interface IProcessResourceAccess
     {
-        Task<IAsyncEnumerable<string>> CreateAsync(PlotProcessMetadata plotProcessMetadata, CancellationToken cancellationToken);
+        Task<IAsyncEnumerable<ChiaPlotOutput>> CreateAsync(PlotProcessMetadata plotProcessMetadata, CancellationToken cancellationToken);
     }
     
 }

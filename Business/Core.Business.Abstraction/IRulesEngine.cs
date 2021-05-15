@@ -1,10 +1,11 @@
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Core.Business.Abstraction
 {
-    public interface IRulesEngine<T>
+    public interface IRulesEngine<TIn, TOut>
     {
-        IAsyncEnumerable<T> ProcessAsync(IAsyncEnumerable<T> inputChannel, CancellationToken cancellationToken);
+        Task<TOut> ProcessAsync(IEnumerable<TIn> inputChannel, CancellationToken cancellationToken);
     }
 }

@@ -14,7 +14,7 @@ namespace PlotMonster.ResourceAccess.Implementation
         private readonly Channel<IEnumerable<ChiaPlotOutput>> channel;
         public ChiaPlotOutputRepository()
         {
-            this.channel = Channel.CreateUnbounded<IEnumerable<ChiaPlotOutput>>();
+            this.channel = Channel.CreateBounded<IEnumerable<ChiaPlotOutput>>(new BoundedChannelOptions(1) { FullMode = BoundedChannelFullMode.DropOldest });
         }
 
         public async Task AddProcessAsync(ChiaPlotOutput chiaPlotOutput, CancellationToken cancellationToken)
@@ -23,7 +23,7 @@ namespace PlotMonster.ResourceAccess.Implementation
             await channel.Writer.WriteAsync(outputs.Values.Where(p => p.IsPlotComplete == false));
         }
 
-        public IAsyncEnumerable<IEnumerable<ChiaPlotOutput>> GetRunningProcesses(CancellationToken cancellationToken)
+        public IAsyncEnumerable<IEnumerable<ChiaPlotOutput>> GetProcessesAsync(CancellationToken cancellationToken)
         {
             return channel.Reader.ReadAllAsync(cancellationToken);
         }

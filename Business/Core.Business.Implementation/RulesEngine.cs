@@ -3,25 +3,24 @@ using System.Collections.Generic;
 using System.Threading;
 using Core.Business.Abstraction;
 using System.Linq.Async;
+using System.Threading.Tasks;
+using System.Linq;
 
 namespace Core.Business.Implementation
 {
-    public class RulesEngine<T>: IRulesEngine<T>
+    public class RulesEngine<TIn, TOut>: IRulesEngine<TIn, TOut>
     {
-        private readonly IEnumerable<Func<T, bool>> rules;
+        private readonly IEnumerable<Func<IEnumerable<TIn>, bool>> rules;
         public RulesEngine(
-            IEnumerable<Func<T, bool>> rules
+            IEnumerable<Func<IEnumerable<TIn>, bool>> rules
         )
         {
             this.rules = rules;
         }
-        public IAsyncEnumerable<T> ProcessAsync(IAsyncEnumerable<T> inputChannel, CancellationToken cancellationToken)
+        public Task<TOut> ProcessAsync(IEnumerable<TIn> input, CancellationToken cancellationToken)
         {
             // can add optimization by returning the previous value 
-            return inputChannel.Select(i => 
-            {
-                return rules.Where(r => r.Invoke(i)).FirstOrDefault(default(T));
-            });
+                var passedRules = rules.Where(r => r.Invoke(input)).FirstOrDefault(default(TOut));
         }
     }
 }

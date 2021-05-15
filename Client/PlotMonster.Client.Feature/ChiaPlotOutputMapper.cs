@@ -1,6 +1,7 @@
 using System;
+using Core.Utiltiy.Abstraction;
 using PlotMonster.Business.Abstraction;
-using PlotMonster.Utiltiy.Abstraction;
+using PlotMonster.ResourceAccess.Abstraction;
 
 namespace PlotMonster.Client.Feature
 {

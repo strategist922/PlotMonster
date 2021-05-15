@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\PlotMonster.ResourceAccess.Abstraction\PlotMonster.ResourceAccess.Abstraction.csproj" />
+    <ProjectReference Include="..\..\Utility\Core.Utility.Abstraction\Core.Utility.Abstraction.csproj" />
   </ItemGroup>
 
 </Project>

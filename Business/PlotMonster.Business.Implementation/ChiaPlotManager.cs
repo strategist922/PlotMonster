@@ -10,6 +10,9 @@ using System.Threading.Tasks;
 using chia_plotter.Business.Abstraction;
 using chia_plotter.ResourceAccess.Abstraction;
 using chia_plotter.ResourceAccess.Infrastructure;
+using Core.Business.Abstraction;
+using PlotMonster.Business.Abstraction;
+using PlotMonster.ResourceAccess.Abstraction;
 
 namespace chia_plotter.Business.Infrastructure
 {
@@ -23,12 +26,13 @@ namespace chia_plotter.Business.Infrastructure
 
         // private readonly ChiaPlotProcessRepository processRepo;
         // private readonly IChiaPlotEngine chiaPlotEngine;
-        private readonly IRulesEngine rulesEngine;
+        private readonly IRulesEngine<ICollection<ChiaPlotOutput>> rulesEngine;
         // private readonly IMapper<string, ChiaPlotOutput> chiaPlotOutputMapper;
         // private readonly Func<CancellationToken, Task> plotProcessStarter;
         private readonly IChiaPlotOutputRepository chiaPlotOutputRepository;
         private readonly IPlotSizeDeterminationEngine plotSizeDeterminationEngine;
-        private readonly IProcessResourceAccess processResourceAccess;
+        // private readonly IProcessResourceAccess processResourceAccess;
+        private readonly Func<CancellationToken, Task<IProcessResourceAccess>> transientFactoryDelegate;
 
         public ChiaPlotManager(
             // ChiaPlotManagerContextConfiguration chiaPlotManagerContextConfiguration, 
@@ -40,12 +44,13 @@ namespace chia_plotter.Business.Infrastructure
             // IChiaPlotEngine chiaPlotEngine,
             // IAsyncEnumerable<string> input,
             // Action<string> output,
-            IRulesEngine rulesEngine,
+            IRulesEngine<ICollection<ChiaPlotOutput>> rulesEngine,
             // IMapper<string, ChiaPlotOutput> chiaPlotOutputMapper,
             // Func<CancellationToken, Task> plotProcessStarter,
             IChiaPlotOutputRepository chiaPlotOutputRepository,
             IPlotSizeDeterminationEngine plotSizeDeterminationEngine,
-            IProcessResourceAccess processResourceAccess
+            // IProcessResourceAccess processResourceAccess,
+            Func<CancellationToken, Task<IProcessResourceAccess>> transientFactoryDelegate
             )
         {
             this.rulesEngine = rulesEngine;
@@ -53,33 +58,47 @@ namespace chia_plotter.Business.Infrastructure
             // this.plotProcessStarter = plotProcessStarter;
             this.chiaPlotOutputRepository = chiaPlotOutputRepository;
             this.plotSizeDeterminationEngine = plotSizeDeterminationEngine;
-            this.processResourceAccess = processResourceAccess;
+            this.transientFactoryDelegate = transientFactoryDelegate;
         }
 
         public async Task ProcessAsync(CancellationToken cancellationToken)
         {
             // need to start at lease one process or GetRunningProcesses will never output
-            var plotToStart = rulesEngine.ProcessAsync(outputs);
-            if (plotToStart == null) 
+            var tempDrive = rulesEngine.ProcessAsync(outputs);
+            if (string.IsNullOrWhiteSpace(tempDrive)) 
             {
                 throw new Exception("Starting initial plot failed.  There is no plot to start based on the current configuration");
             }
-            await startPlotProcessAsync(plotToStart, cancellationToken);
+            await startPlotProcessAsync(tempDrive, cancellationToken);
 
-            await foreach(var outputs in chiaPlotOutputRepository.GetRunningProcesses(cancellationToken))
+            await foreach(var outputs in chiaPlotOutputRepository.GetProcessesAsync(cancellationToken))
             {
-                var plotToStart = rulesEngine.ProcessAsync(outputs, cancellationToken);
-                if (plotToStart != null)
+                var tempDrive = await rulesEngine.ProcessAsync(outputs, cancellationToken);
+                if (!string.IsNullOrWhiteSpace(tempDrive))
                 {
-                    await startPlotProcessAsync(plotToStart, cancellationToken);
+                    await startPlotProcessAsync(tempDrive, cancellationToken);
                 }
             }
         }
 
-        private async Task startPlotProcessAsync(PlotToStart plotToStart, CancellationToken cancellationToken)
+        private async Task startPlotProcessAsync(string tempDrive, CancellationToken cancellationToken)
         {
+            // this needs to wait for the id to show up... i think the processResourceAccess should control that.
+            // the idea was to get the string putput, map it to a plot process output and then feed that into the add process
+            // the chiaPlotOutputRepository injects in a mapper to do it.  it will also await in AddProcessAsync until it supplies an id
+            // is there still an issue where the output can run again before this is triggered which would trigger this again?
+            // so if we just let this flow... when do we determine if we need a new process?
+
+/*
+1. process repo will map until it gets an id and then return the channel
+2. manager will pass that into the outputs repo
+3. manager will continue until it sees an output with that newly created id
+4. manager will then flow through to check if another plot needs to be created.
+*/
+
             var kSize = plotSizeDeterminationEngine.DeterminePlotSizeAsync(plotToStart.TempDrive, plotToStart.DestinationDrive);
-            var applicablePlot = plots.Whaere(p => p.KSize == kSize).First();
+            var applicablePlot = plots.Where(p => p.KSize == kSize).First();
+            var processResourceAccess = await transientFactoryDelegate.Invoke(cancellationToken);
             await chiaPlotOutputRepository.AddProcessAsync(
                 await processResourceAccess.CreateAsync(
                     new PlotProcessMetadata
