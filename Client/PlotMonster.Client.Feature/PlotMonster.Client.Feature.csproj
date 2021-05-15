@@ -13,6 +13,8 @@
     <ProjectReference Include="..\..\Utility\Core.Utility.Implementation\Core.Utility.Implementation.csproj" />
     <ProjectReference Include="..\..\Business\Core.Business.Abstraction\Core.Business.Abstraction.csproj" />
     <ProjectReference Include="..\..\Business\Core.Business.Implementation\Core.Business.Implementation.csproj" />
+    <ProjectReference Include="..\..\Business\PlotMonster.Business.Abstraction\PlotMonster.Business.Abstraction.csproj" />
+    <ProjectReference Include="..\..\Business\PlotMonster.Business.Implementation\PlotMonster.Business.Implementation.csproj" />
     <ProjectReference Include="..\..\ResourceAccess\PlotMonster.ResourceAccess.Abstraction\PlotMonster.ResourceAccess.Abstraction.csproj" />
     <ProjectReference Include="..\..\ResourceAccess\PlotMonster.ResourceAccess.Implementation\PlotMonster.ResourceAccess.Implementation.csproj" />
   </ItemGroup>

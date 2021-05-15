@@ -22,19 +22,19 @@ namespace PlotMonster.ResourceAccess.Infrastructure
         public async Task<IAsyncEnumerable<string>> CreateAsync(PlotProcessMetadata plotProcessMetadata, CancellationToken cancellationToken)
         {
             var process = new Process();
-            var channel = channel.CreateUnbounded();
+            var channel = Channel.CreateUnbounded<string>();
             process.StartInfo.FileName = "/bin/bash";
             process.StartInfo.RedirectStandardInput = true;
             process.StartInfo.RedirectStandardOutput = true;
             process.OutputDataReceived += new DataReceivedEventHandler(async (sender, e) => {
                 if (cancellationToken.IsCancellationRequested)
                 {
-                    await channel.WriteLineAsync("Cancellation requested.  Terminating process...");
+                    await channel.Writer.WriteAsync("Cancellation requested.  Terminating process...");
                     process.CancelOutputRead();
                     process.Kill();
                     return;
                 }
-                await channel.WriteLineAsync(e.Data);
+                await channel.Writer.WriteAsync(e.Data);
             });
             process.Start();
             process.BeginOutputReadLine();
@@ -43,7 +43,7 @@ namespace PlotMonster.ResourceAccess.Infrastructure
             // await process.StandardInput.WriteLineAsync("cd ~/chia-blockchain");
             // await process.StandardInput.WriteLineAsync(". ./activate");
             // await process.StandardInput.WriteLineAsync($"chia plots create -k {plotProcessMetadata.KSize} -r {plotProcessMetadata.Threads} -b {plotProcessMetadata.Ram} -t {plotProcessMetadata.TempDrive} -2 {plotProcessMetadata.TempDrive} -d {plotProcessMetadata.DestDrive}");
-            return channel.Reader;
+            return channel.Reader.ReadAllAsync(cancellationToken);
         }
     }
 }

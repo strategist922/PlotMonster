@@ -6,8 +6,10 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
+using PlotMonster.Business.Abstraction;
+using PlotMonster.Client.Feature;
 
-namespace chia_plotter.Client
+namespace PlotMonster.Client.TerminalGui
 {
     class Program
     {
@@ -21,7 +23,10 @@ namespace chia_plotter.Client
             try
             {
                 var serviceProvider = new ServiceCollection()
-                    .AddChiaPlotFeature()
+                    .AddChiaPlotsOutputFeature(config =>
+                    {
+
+                    })
                     .AddChiaPlotsOutputFeature()
                     .BuildServiceProvider();
                 
@@ -236,17 +241,17 @@ namespace chia_plotter.Client
             finally
             {
                 Console.WriteLine("==================");
-                var processes = repo.GetAll();
-                foreach(var process in processes)
-                {
-                    if (process.HasExited)
-                    {
-                        continue;
-                    }
-                    Console.WriteLine($"Killing process {process.Id}");
-                    process.Kill(true);
-                    process.Close();
-                }
+                // var processes = repo.GetAll();
+                // foreach(var process in processes)
+                // {
+                //     if (process.HasExited)
+                //     {
+                //         continue;
+                //     }
+                //     Console.WriteLine($"Killing process {process.Id}");
+                //     process.Kill(true);
+                //     process.Close();
+                // }
                 Console.WriteLine("Done... press any key to exit");
                 Console.ReadLine();
             }

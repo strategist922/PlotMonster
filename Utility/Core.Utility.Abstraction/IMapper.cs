@@ -1,4 +1,4 @@
-namespace chia_plotter.Utiltiy.Abstraction
+namespace Core.Utiltiy.Abstraction
 {
     public interface IMapper<TIn, TOut>
     {

@@ -1,4 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using PlotMonster.Business.Abstraction;
+using PlotMonster.Business.Implementation;
+using PlotMonster.ResourceAccess.Abstraction;
+using PlotMonster.ResourceAccess.Implementation;
 
 namespace PlotMonster.Client.Feature
 {

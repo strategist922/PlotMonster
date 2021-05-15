@@ -6,7 +6,7 @@ namespace PlotMonster.ResourceAccess.Abstraction
 {
     public interface IChiaPlotOutputRepository
     {
-        Task AddProcessAsync(ChiaPlotProcess chiaPlotProcess, CancellationToken cancellationToken);
-        IAsyncEnumerable<ICollection<ChiaPlotProcess>> GetRunningProcesses(CancellationToken cancellationToken);
+        Task AddProcessAsync(ChiaPlotOutput chiaPlotProcess, CancellationToken cancellationToken);
+        IAsyncEnumerable<IEnumerable<ChiaPlotOutput>> GetRunningProcesses(CancellationToken cancellationToken);
     }
 }

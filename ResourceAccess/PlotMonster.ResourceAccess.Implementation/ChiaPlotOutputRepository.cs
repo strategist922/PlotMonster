@@ -1,24 +1,31 @@
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Channels;
+using System.Threading.Tasks;
+using PlotMonster.ResourceAccess.Abstraction;
+
 namespace PlotMonster.ResourceAccess.Implementation
 {
     // singleton
     public class ChiaPlotOutputRepository : IChiaPlotOutputRepository
     {
-        private Dictionary<string, ChiaPlotOutput> outputs {get;set;}
-        private readonly Channel channel;
+        private IDictionary<string, ChiaPlotOutput> outputs {get;set;}
+        private readonly Channel<IEnumerable<ChiaPlotOutput>> channel;
         public ChiaPlotOutputRepository()
         {
-            this.channel = Channel.CreateUnbounded();
+            this.channel = Channel.CreateUnbounded<IEnumerable<ChiaPlotOutput>>();
         }
 
         public async Task AddProcessAsync(ChiaPlotOutput chiaPlotOutput, CancellationToken cancellationToken)
         {
             outputs[chiaPlotOutput.Id] = chiaPlotOutput;
-            await channel.WriteAsync(await outputs.Values.Where(p => p.IsPlotComplete == false).ToListAsync(cancellationToken));
+            await channel.Writer.WriteAsync(outputs.Values.Where(p => p.IsPlotComplete == false));
         }
 
-        public IAsyncEnumerable<ICollection<ChiaPlotOutput>> GetRunningProcesses(CancellationToken cancellationToken)
+        public IAsyncEnumerable<IEnumerable<ChiaPlotOutput>> GetRunningProcesses(CancellationToken cancellationToken)
         {
-            return channel.ChannelReader;
+            return channel.Reader.ReadAllAsync(cancellationToken);
         }
     }
 }

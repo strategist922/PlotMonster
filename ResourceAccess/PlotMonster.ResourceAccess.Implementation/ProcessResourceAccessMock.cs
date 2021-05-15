@@ -1,9 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
-using chia_plotter.ResourceAccess.Abstraction;
+using PlotMonster.ResourceAccess.Abstraction;
 
 namespace PlotMonster.ResourceAccess.Infrastructure
 {
@@ -16,8 +17,8 @@ namespace PlotMonster.ResourceAccess.Infrastructure
             var random = new Random();
             var id = "abcd" + random.Next(1000000000, int.MaxValue);
             
-            await channel.Writer.WriteAsync($"TEMPDRIVE:{tempDrive}");
-            await channel.Writer.WriteAsync($"DESTDRIVE:{destDrive}");
+            // await channel.Writer.WriteAsync($"TEMPDRIVE:{plotProcessMetadata.TempDrive}");
+            // await channel.Writer.WriteAsync($"DESTDRIVE:{plotProcessMetadata.DestDrive}");
 
             var file = Path.Combine(Directory.GetCurrentDirectory(), "mock_plot_process.txt");
             // how can we do the reader without using Task.Run???
@@ -32,10 +33,10 @@ namespace PlotMonster.ResourceAccess.Infrastructure
                     Thread.Sleep(25);
                 }
                 // @TODO how do i complete the channel?
-                channel.Close();
+                channel.Writer.Complete();
             }
             
-            return channel;
+            return channel.Reader.ReadAllAsync(cancellationToken);
         }
 
     }

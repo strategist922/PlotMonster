@@ -1,4 +1,4 @@
-namespace chia_plotter.Client.Feature
+namespace PlotMonster.Client.Feature
 {
     public static class WellknownSystemType
     {

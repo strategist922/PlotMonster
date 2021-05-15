@@ -1,8 +1,8 @@
 using System;
-using chia_plotter.Business.Abstraction;
-using chia_plotter.Utiltiy.Abstraction;
+using PlotMonster.Business.Abstraction;
+using PlotMonster.Utiltiy.Abstraction;
 
-namespace chia_plotter.Client.Feature.Implementation
+namespace PlotMonster.Client.Feature
 {
     public class ChiaPlotOutputMapper : IMapper<string, ChiaPlotOutput>
     {

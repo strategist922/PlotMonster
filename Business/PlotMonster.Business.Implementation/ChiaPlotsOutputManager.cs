@@ -4,10 +4,10 @@ this will eventually morph into some service invocation ingress so plotting can 
 */
 namespace PlotMonster.Business.Implementation
 {
-    public class ChiaPlotsProcessesOutputManager
+    public class ChiaPlotsOutputManager: IChiaPlotsOutputManager
     {
         private readonly IChiaPlotOutputRepository chiaPlotOutputRepository;
-        public ChiaPlotsProcessesOutputManager(
+        public ChiaPlotsOutputManager(
             IChiaPlotOutputRepository chiaPlotOutputRepository
         )
         {
