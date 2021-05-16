@@ -6,6 +6,6 @@ namespace Core.Business.Abstraction
 {
     public interface IRulesEngine<TIn, TOut>
     {
-        Task<TOut> ProcessAsync(IEnumerable<TIn> inputChannel, CancellationToken cancellationToken);
+        TOut Process(TIn input, CancellationToken cancellationToken);
     }
 }

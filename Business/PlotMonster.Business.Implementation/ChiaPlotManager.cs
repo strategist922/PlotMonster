@@ -26,11 +26,11 @@ namespace chia_plotter.Business.Infrastructure
 
         // private readonly ChiaPlotProcessRepository processRepo;
         // private readonly IChiaPlotEngine chiaPlotEngine;
-        private readonly IRulesEngine<ICollection<ChiaPlotOutput>> rulesEngine;
+        private readonly IRulesEngine<IEnumerable<ChiaPlotOutput>, TempDriveContext> availableTempDriveResourceRuleEngine;
         // private readonly IMapper<string, ChiaPlotOutput> chiaPlotOutputMapper;
         // private readonly Func<CancellationToken, Task> plotProcessStarter;
         private readonly IChiaPlotOutputRepository chiaPlotOutputRepository;
-        private readonly IPlotSizeDeterminationEngine plotSizeDeterminationEngine;
+        private readonly IPlotSizeDeterminationEngine destinationPlotSizeDeterminationEngine;
         // private readonly IProcessResourceAccess processResourceAccess;
         private readonly Func<CancellationToken, Task<IProcessResourceAccess>> transientFactoryDelegate;
 
@@ -44,44 +44,44 @@ namespace chia_plotter.Business.Infrastructure
             // IChiaPlotEngine chiaPlotEngine,
             // IAsyncEnumerable<string> input,
             // Action<string> output,
-            IRulesEngine<ICollection<ChiaPlotOutput>> rulesEngine,
+            IRulesEngine<IEnumerable<ChiaPlotOutput>, TempDriveContext> availableTempDriveResourceRuleEngine,
             // IMapper<string, ChiaPlotOutput> chiaPlotOutputMapper,
             // Func<CancellationToken, Task> plotProcessStarter,
             IChiaPlotOutputRepository chiaPlotOutputRepository,
-            IPlotSizeDeterminationEngine plotSizeDeterminationEngine,
+            IPlotSizeDeterminationEngine destinationPlotSizeDeterminationEngine,
             // IProcessResourceAccess processResourceAccess,
             Func<CancellationToken, Task<IProcessResourceAccess>> transientFactoryDelegate
             )
         {
-            this.rulesEngine = rulesEngine;
+            this.availableTempDriveResourceRuleEngine = availableTempDriveResourceRuleEngine;
             // this.chiaPlotOutputMapper = chiaPlotOutputMapper;
             // this.plotProcessStarter = plotProcessStarter;
             this.chiaPlotOutputRepository = chiaPlotOutputRepository;
-            this.plotSizeDeterminationEngine = plotSizeDeterminationEngine;
+            this.destinationPlotSizeDeterminationEngine = destinationPlotSizeDeterminationEngine;
             this.transientFactoryDelegate = transientFactoryDelegate;
         }
 
         public async Task ProcessAsync(CancellationToken cancellationToken)
         {
             // need to start at lease one process or GetRunningProcesses will never output
-            var tempDrive = rulesEngine.ProcessAsync(outputs);
-            if (string.IsNullOrWhiteSpace(tempDrive)) 
+            var availablePlotTempDriveResource = availableTempDriveResourceRuleEngine.Process(new ChiaPlotOutput[]{}, cancellationToken);
+            if (string.IsNullOrWhiteSpace(availablePlotTempDriveResource.TempDrive)) 
             {
                 throw new Exception("Starting initial plot failed.  There is no plot to start based on the current configuration");
             }
-            await startPlotProcessAsync(tempDrive, cancellationToken);
+            await startPlotProcessAsync(availablePlotTempDriveResource, new ChiaPlotOutput[]{}, cancellationToken);
 
             await foreach(var outputs in chiaPlotOutputRepository.GetProcessesAsync(cancellationToken))
             {
-                var tempDrive = await rulesEngine.ProcessAsync(outputs, cancellationToken);
-                if (!string.IsNullOrWhiteSpace(tempDrive))
+                availablePlotTempDriveResource = availableTempDriveResourceRuleEngine.Process(outputs, cancellationToken);
+                if (!string.IsNullOrWhiteSpace(availablePlotTempDriveResource.TempDrive))
                 {
-                    await startPlotProcessAsync(tempDrive, cancellationToken);
+                    await startPlotProcessAsync(availablePlotTempDriveResource, outputs, cancellationToken);
                 }
             }
         }
 
-        private async Task startPlotProcessAsync(string tempDrive, CancellationToken cancellationToken)
+        private async Task startPlotProcessAsync(TempDriveContext tempDriveContext, IEnumerable<ChiaPlotOutput> outputs, CancellationToken cancellationToken)
         {
             // this needs to wait for the id to show up... i think the processResourceAccess should control that.
             // the idea was to get the string putput, map it to a plot process output and then feed that into the add process
@@ -95,19 +95,19 @@ namespace chia_plotter.Business.Infrastructure
 3. manager will continue until it sees an output with that newly created id
 4. manager will then flow through to check if another plot needs to be created.
 */
-
-            var kSize = plotSizeDeterminationEngine.DeterminePlotSizeAsync(plotToStart.TempDrive, plotToStart.DestinationDrive);
-            var applicablePlot = plots.Where(p => p.KSize == kSize).First();
+            // this should return everything needed to start plot; dest, k, ram, thread...
+            var availableDestinationPlotResource = await destinationPlotSizeDeterminationEngine.DeterminePlotSizeAsync(tempDriveContext.TempDrive, outputs, cancellationToken);
+            // var applicablePlot = plots.Where(p => p.KSize == kSize).First();
             var processResourceAccess = await transientFactoryDelegate.Invoke(cancellationToken);
             await chiaPlotOutputRepository.AddProcessAsync(
                 await processResourceAccess.CreateAsync(
                     new PlotProcessMetadata
                     {
-                        TempDrive = plotToStart.TempDrive,
-                        DestDrive = plotToStart.DestinationDrive,
-                        KSize = applicablePlot.KSize,
-                        Ram = applicablePlot.Ram,
-                        Threads = applicablePlot.Threads
+                        TempDrive = tempDriveContext.TempDrive,
+                        DestDrive = availableDestinationPlotResource.DestinationDrive,
+                        KSize = availableDestinationPlotResource.PlotSize.K.ToString(),
+                        Ram = availableDestinationPlotResource.PlotSize.Ram.ToString(),
+                        Threads = availableDestinationPlotResource.PlotSize.Threads.ToString()
                     }, cancellationToken));
         }
 /*

@@ -35,5 +35,47 @@
     ],
     "MaxParallelPlotsPerTempDrive": 2,
     "StaggeredPlots": true,
-    "SystemType": "linux-x64"
+    "SystemType": "linux-x64",
+    "PlotStartRuleTemplates": [
+        {
+            "ComputeRestrictorTemplate": {
+                "ComputeRestrictor": {
+                    "Compute":{
+                        "Threads": 44,
+                        "Ram": 120000000
+                    },
+                    "ThreadOverthrottlePercent": 20
+                }
+            }
+        }
+    ],
+    "PlotStartRules": [
+        {
+            "PhaseStaggerRule": {
+                "StaggerPhase": 2,
+                "MaxConcurrentPerPhase": 1
+            },
+            "Template": "ComputeRestrictorTemplate"
+        },
+        {
+            "SmartStaggerRule": {
+                "GetBaseLineMetricsFromDryRun": false,
+                "AcrossAllTempDrives": false,
+                "Expectations": {
+                    "BassLineMetrics": {
+                        "PlotSize": 32,
+                        "PhaseOneTIme": "1h45m",
+                        "PhaseTwoTime": "1h",
+                        "PhaseThreeTime": "2h30m",
+                        "PhaseFourTime": "45m"
+                    }
+                },
+                "TrackSystemResources": {
+                    "Cpu": false,
+                    "Ram": false,
+                    "TempDrive": false
+                }
+            }
+        }
+    ]
 }
