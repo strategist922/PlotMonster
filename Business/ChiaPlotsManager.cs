@@ -133,7 +133,7 @@ namespace chia_plotter.Business.Infrastructure
                         
                         if (remaining.Count() < chiaPlotManagerContextConfiguration.PlotsPerDrive
                             && remaining.Where(o => string.IsNullOrWhiteSpace(o.CurrentPhase) || (o.CurrentPhase == "1" || o.CurrentPhase == "2")).Count() < maxParallelPlotsPerStagger
-                            && completed.Where(c => c.IsTransferComplete == false).Count() < 2)
+                            && completed.Where(c => c.IsTransferComplete == false).Count() < 4)
                         {
                             startNewProcess = true;
                         }
