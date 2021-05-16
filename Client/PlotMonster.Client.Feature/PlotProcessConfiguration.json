@@ -53,7 +53,12 @@
         {
             "PhaseStaggerRule": {
                 "StaggerPhase": 2,
-                "MaxConcurrentPerPhase": 1
+                "MaxConcurrentPerPhase": 1,
+                "TransferStatus": {
+                    "ConsiderTransferAsComplete": true,
+                    "MaxConcurrentTransfersPerDestination": 2
+                    // we could make that part of the destination metadata so we can write rules for designation.
+                }
             },
             "Template": "ComputeRestrictorTemplate"
         },
