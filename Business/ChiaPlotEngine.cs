@@ -31,6 +31,12 @@ namespace chia_plotter.Business.Infrastructure
                     {
                         report.DestinationDrive = line.Substring(10);
                     }
+                    if (line.IndexOf("PROCESSID:") > -1)
+                    {   
+                        var processId = 0;
+                        int.TryParse(line.Substring(10), out processId);
+                        report.ProcessId = processId;
+                    }
                     if (line.IndexOf("ID:") > -1)
                     {
                         report.Id = line.Substring(4);
@@ -112,6 +118,12 @@ namespace chia_plotter.Business.Infrastructure
                         report.Duration = DateTime.Now.Subtract(report.StartTime);
                         var copyTime = line.Substring(12);
                         report.CopyTime = copyTime.Substring(0, copyTime.IndexOf(" seconds"));
+                    }
+                    else if (line.IndexOf("Error No such file or directory") > -1) {
+                        report.IsPlotComplete = true;
+                        report.IsTransferComplete = true;
+                        report.IsTransferError = true;
+                        // need to start the file transfer and rename
                     }
                     await outputChannel.Writer.WriteAsync(report);
                 }

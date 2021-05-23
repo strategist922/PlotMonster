@@ -123,6 +123,44 @@ namespace chia_plotter.Business.Infrastructure
                     }
                     uniqueOutputs[output.Id] = output;
                     var outputs = uniqueOutputs.Values;
+                    if (output.IsTransferError) {
+                        // add destination to ignored 
+                        var process = processRepo.GetAll().Where(p => p.Id == output.ProcessId).FirstOrDefault();
+                        process.Kill(true);
+                        process.Close();
+
+                        if(!ignoredDrives.Any(id => id == output.DestinationDrive))
+                        {
+                            ignoredDrives.Add(output.DestinationDrive);
+                        }
+
+                        // start new transfer process to alternative destination
+                        foreach (var destination in chiaPlotManagerContextConfiguration.DestinationPlotDrives)
+                        {
+                            //var tempFile = Path.Combine(output.TempDrive, $"{output.Id}");
+                            if (!ignoredDrives.Any(id => id == destination)) 
+                            {
+                                var driveInfo = new DriveInfo(destination);
+                                var tempFileName = Directory.GetFiles(output.TempDrive, output.Id).FirstOrDefault();
+
+                                if (string.IsNullOrEmpty(tempFileName)) 
+                                {
+                                    // throw?
+                                }
+                                var tempFile = new FileInfo(tempFileName);
+                                if (driveInfo.AvailableFreeSpace > tempFile.Length)
+                                {
+                                    var trimmedFileName = tempFileName.Substring(tempFileName.IndexOf("plot-k"));
+                                    trimmedFileName = trimmedFileName.Substring(0, trimmedFileName.IndexOf(".plot.") + 5);
+                                    tempFile.MoveTo(Path.Combine(destination, trimmedFileName), true);
+                                    break;
+                                }
+                            }
+                        }
+
+                        output.IsTransferError = false;
+                        
+                    }
                     
                     if (!ignoredDrives.Any(d => d == output.DestinationDrive || d == output.TempDrive))
                     {
@@ -131,9 +169,12 @@ namespace chia_plotter.Business.Infrastructure
                         var completed = related.Where(o => o.IsPlotComplete);
                         var remaining = related.Where(o => !o.IsPlotComplete);
                         
+                        //1) where get all remaining that is transfering and do not count those
                         if (remaining.Count() < chiaPlotManagerContextConfiguration.PlotsPerDrive
-                            && remaining.Where(o => string.IsNullOrWhiteSpace(o.CurrentPhase) || (o.CurrentPhase == "1" || o.CurrentPhase == "2")).Count() < maxParallelPlotsPerStagger
-                            && completed.Where(c => c.IsTransferComplete == false).Count() < 4)
+                            && remaining
+                                .Where(o => string.IsNullOrWhiteSpace(o.CurrentPhase) || (o.CurrentPhase == "1" || o.CurrentPhase == "2"))
+                                    .Count() < maxParallelPlotsPerStagger
+                            && completed.Where(c => c.IsTransferComplete == false).Count() < chiaPlotManagerContextConfiguration.PlotsPerDrive)
                         {
                             startNewProcess = true;
                         }
@@ -142,9 +183,11 @@ namespace chia_plotter.Business.Infrastructure
                         {
                             var process = await startProcess(output.DestinationDrive, output.TempDrive);
                             var first = await process.Reader.ReadAsync();
+                      
                             if (!string.IsNullOrWhiteSpace(first.InvalidDrive)) 
                             {
-                                if(!ignoredDrives.Any(id => id == first.InvalidDrive))
+                                if ((first.InvalidDrive == first.TempDrive && first.TempDrive != first.DestinationDrive) 
+                                    && (!ignoredDrives.Any(id => id == first.InvalidDrive)))
                                 {
                                     ignoredDrives.Add(first.InvalidDrive);
                                 }

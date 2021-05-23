@@ -14,7 +14,7 @@ namespace chia_plotter
     {
         static async Task Main(string[] args)
         {
-            var testing = true;
+            var testing = false;
             var repo = new ChiaPlotProcessRepository();
             try
             {
@@ -24,7 +24,8 @@ namespace chia_plotter
                 { 
                     "/chia/plottemp1",
                     "/chia/plottemp2", 
-                    "/chia/plottemp3"
+                    "/chia/plottemp3",
+                    "/chia/plottemp4"
                 };
                 config.DestinationPlotDrives = new List<string>() 
                 { 

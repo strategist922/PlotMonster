@@ -14,8 +14,10 @@ namespace chia_plotter.Business.Abstraction
         public string DestinationDrive {get;set;}
         public bool IsPlotComplete {get;set;}
         public bool IsTransferComplete {get;set;}
+        public bool IsTransferError {get;set;}
         public string CopyTime {get;set;}
         public string InvalidDrive {get;set;}
+        public int ProcessId {get;set;}
         public DateTime StartTime {get;set;}
         public TimeSpan Duration {get;set;}
     }
