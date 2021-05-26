@@ -29,7 +29,7 @@ namespace chia_plotter.ResourceAccess.Infrastructure
             var channel = Channel.CreateUnbounded<string>();
 
             var process = new Process();
-            await channel.Writer.WriteAsync($"PROCESSID:{process.Id}");
+            
             await channel.Writer.WriteAsync($"TEMPDRIVE:{tempDrive}");
             await channel.Writer.WriteAsync($"DESTDRIVE:{destDrive}");
 
@@ -41,7 +41,7 @@ namespace chia_plotter.ResourceAccess.Infrastructure
                 await channel.Writer.WriteAsync(e.Data);
             });
             process.Start();
-            
+            await channel.Writer.WriteAsync($"PROCESSID:{process.Id}");
             process.StandardInput.WriteLine("cd ~/chia-blockchain");
             process.StandardInput.WriteLine(". ./activate");
             process.StandardInput.WriteLine($"chia plots create -k {kSize} -r {threads} -b {ram} -t {tempDrive} -2 {tempDrive} -d {destDrive}");

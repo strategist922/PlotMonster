@@ -42,7 +42,7 @@ namespace chia_plotter.Business.Infrastructure
             var outputChannel = Channel.CreateUnbounded<ChiaPlotOutput>();
             var ignoredDrives = new List<string>();
             var staticText = new StringBuilder();
-            var maxParallelPlotsPerStagger = 1;
+            var maxParallelPlotsPerStagger = 4;
             // initialization process to start 2 plots per temp drive
             // don't ignore plot drives but do check plot drives are not on the ignoreDrives list.  This will allow us to have the same temp and dest drive and ignore when full.
 // where do I add the logic to stagger?

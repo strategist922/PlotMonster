@@ -37,7 +37,7 @@ namespace chia_plotter.Business.Infrastructure
                         int.TryParse(line.Substring(10), out processId);
                         report.ProcessId = processId;
                     }
-                    if (line.IndexOf("ID:") > -1)
+                    else if (line.IndexOf("ID:") > -1)
                     {
                         report.Id = line.Substring(4);
                         await outputChannel.Writer.WriteAsync(report);
