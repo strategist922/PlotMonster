@@ -133,7 +133,7 @@ namespace chia_plotter.Business.Infrastructure
                         {
                             ignoredDrives.Add(output.DestinationDrive);
                         }
-
+                        // TODO - this needs to remove the incompleted file from the destinaction
                         // start new transfer process to alternative destination
                         foreach (var destination in chiaPlotManagerContextConfiguration.DestinationPlotDrives)
                         {
@@ -146,6 +146,7 @@ namespace chia_plotter.Business.Infrastructure
                                 if (string.IsNullOrEmpty(tempFileName)) 
                                 {
                                     // throw?
+                                    break;
                                 }
                                 var tempFile = new FileInfo(tempFileName);
                                 if (driveInfo.AvailableFreeSpace > tempFile.Length)
@@ -156,6 +157,13 @@ namespace chia_plotter.Business.Infrastructure
                                     break;
                                 }
                             }
+                        }
+                        
+                        var incompleteTransfer = Directory.GetFiles(output.DestinationDrive, output.Id);
+                        foreach (var file in incompleteTransfer) 
+                        {
+                            var incompleteFile = new FileInfo(file);
+                            incompleteFile.Delete();
                         }
 
                         output.IsTransferError = false;

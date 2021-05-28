@@ -119,7 +119,9 @@ namespace chia_plotter.Business.Infrastructure
                         var copyTime = line.Substring(12);
                         report.CopyTime = copyTime.Substring(0, copyTime.IndexOf(" seconds"));
                     }
-                    else if (line.IndexOf("Error No such file or directory") > -1) {
+                    else if (line.IndexOf("Error No space left on device") > -1) {
+                        //Could not copy "/chia/plottemp4/plot-k32-2021-05-26-02-29-422d6204f0e59df87f48bb9778b79194b656868bafeae9c9e73187ec670a1aa9.plot.2.tmp" to "/chia/plots/205/plot-k32-2021-05-26-02-29-422d6204f0e59df87f48bb9778b79194b656868bafeae9c9e73187ec670a1aa9.plot.2.tmp". Error No space left on device. Retrying in five minutes.
+                        // that line is the wrong line.  that is if something was removed
                         report.IsPlotComplete = true;
                         report.IsTransferComplete = true;
                         report.IsTransferError = true;

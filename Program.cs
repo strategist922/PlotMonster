@@ -81,7 +81,7 @@ namespace chia_plotter
                         Console.WriteLine(DateTime.Now.ToString("T").PadRight(50 * 3, '-'));
                         var displayColumnIndex = 0;
                         // TODO - make configurable
-                        var maxDisplayColumnWidth = 6;
+                        const int maxDisplayColumnWidth = 6;
                         var displayBuilder = new DisplayBuilder();
                         foreach (var uniqueOutput in outputs.Where(o => o.IsTransferComplete == false).OrderBy(o => o.TempDrive)) 
                         {   
@@ -116,13 +116,13 @@ namespace chia_plotter
                         //     }
                         //     displayOutputs(lmr[0], lmr[1], lmr[2]);
                         // }
-                        Console.WriteLine(string.Empty.PadRight(50 * 3, '-'), Color.BlueViolet);
+                        // Console.WriteLine(string.Empty.PadRight(50 * maxDisplayColumnWidth, '-'), Color.BlueViolet);
                         var avg = outputs.Where(o => o.IsTransferComplete && o.Duration != default).Select(o => o.Duration);
                         var averageTime = TimeSpan.FromSeconds(avg.Any() ? avg.Average(timespan => timespan.TotalSeconds) : 0);
                         var skippedTempDrive = outputs.Where(o => o.InvalidDrive == o.TempDrive && o.TempDrive != o.DestinationDrive);
                         Console.WriteLine($"Completed: {outputs.Where(o => o.IsTransferComplete).Count()} plots with an average time of {averageTime.Hours}:{averageTime.Minutes}:{averageTime.Seconds}");
                         Console.WriteLine($"Skipped {skippedTempDrive.Count()} temp drive{(skippedTempDrive.Count() != 1 ? "s" : string.Empty)}.");
-                        Console.WriteLine(staticTextStringBuilder.ToString());
+                        // Console.WriteLine(staticTextStringBuilder.ToString());
                     },
                     tempDrive => 
                     {
@@ -204,7 +204,8 @@ namespace chia_plotter
         {
             // todo - make a output property called truncatedId where we get the last n characters only once.  
             var width = 50;
-            displayBuilder.Line1.Append($"ID: {chiaPlotOutput.Id}".PadRight(width - 1) + "|");
+            var id = !string.IsNullOrWhiteSpace(chiaPlotOutput.Id) && chiaPlotOutput.Id.Length > 10 ? chiaPlotOutput.Id.Substring(chiaPlotOutput.Id.Length - 10) : "waiting...";
+            displayBuilder.Line1.Append($"ID: {id}".PadRight(width - 1) + "|");
             displayBuilder.Line2.Append($"K: {chiaPlotOutput.KSize} Ram: {chiaPlotOutput.Ram} Threads: {chiaPlotOutput.Threads}".PadRight(width - 1) + "|");
             displayBuilder.Line3.Append($"Destination: {chiaPlotOutput.DestinationDrive}".PadRight(width - 1) + "|");
             displayBuilder.Line4.Append($"Temp: {chiaPlotOutput.TempDrive}".PadRight(width - 1) + "|");
@@ -223,6 +224,7 @@ namespace chia_plotter
 
         private static void Display(DisplayBuilder displayBuilder)
         {
+            var width = 50 * 6;
             Console.WriteLine(displayBuilder.Line1.ToString());
             Console.WriteLine(displayBuilder.Line2.ToString());
             Console.WriteLine(displayBuilder.Line3.ToString());
@@ -230,21 +232,21 @@ namespace chia_plotter
             Console.WriteLine(displayBuilder.Line5.ToString());
             Console.WriteLine(displayBuilder.Line6.ToString());
             Console.WriteLine(displayBuilder.Line7.ToString());
-
+            Console.WriteLine(string.Empty.PadRight(width, '-'), Color.BlueViolet);
         }
     }
 
     public class DisplayBuilder
     {
-        public StringBuilder Line1 {get;set;}
-        public StringBuilder Line2 {get;set;}
-        public StringBuilder Line3 {get;set;}
-        public StringBuilder Line4 {get;set;}
-        public StringBuilder Line5 {get;set;}
-        public StringBuilder Line6 {get;set;}
-        public StringBuilder Line7 {get;set;}
-        public StringBuilder Line8 {get;set;}
-        public StringBuilder Line9 {get;set;}
-        public StringBuilder Line10 {get;set;}
+        public StringBuilder Line1 {get;set;} = new StringBuilder();
+        public StringBuilder Line2 {get;set;} = new StringBuilder();
+        public StringBuilder Line3 {get;set;} = new StringBuilder();
+        public StringBuilder Line4 {get;set;} = new StringBuilder();
+        public StringBuilder Line5 {get;set;} = new StringBuilder();
+        public StringBuilder Line6 {get;set;} = new StringBuilder();
+        public StringBuilder Line7 {get;set;} = new StringBuilder();
+        public StringBuilder Line8 {get;set;} = new StringBuilder();
+        public StringBuilder Line9 {get;set;} = new StringBuilder();
+        public StringBuilder Line10 {get;set;} = new StringBuilder();
     }
 }
