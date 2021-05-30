@@ -1,10 +1,11 @@
 using System;
 
-namespace PlotMonster.ResourceAccess.Abstraction
+namespace PlotMonster.Access.Abstraction
 {
     public class ChiaPlotOutput
     {
         public string Id {get;set;}
+        public string ShortId {get;set;}
         public string KSize {get;set;}
         public string Ram {get;set;}
         public string Threads {get;set;}

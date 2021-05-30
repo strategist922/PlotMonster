@@ -1,4 +1,4 @@
-namespace PlotMonster.ResourceAccess.Abstraction
+namespace PlotMonster.Access.Abstraction
 {
     public class PlotProcessMetadata
     {
