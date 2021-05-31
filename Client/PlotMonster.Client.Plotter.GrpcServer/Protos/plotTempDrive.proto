@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+option csharp_namespace = "PlotMonster.Client.Plotter.GrpcServer";
+
+package plotTempDrive;
+
+service PlotTempDrive {
+  rpc Add(PlotTempDriveAddRequest) returns (PlotTempDriveAddResponse);
+  rpc Remove(PlotTempDriveRemoveRequest) returns (PlotTempDriveRemoveResponse)
+}
+
+message PlotTempDriveAddRequest {
+  string tempDrive;
+}
+
+message PlotTempDriveAddResponse {
+}
+
+message PlotTempDriveRemoveRequest {
+  string tempDrive;
+}
+
+message PlotTempDriveRemoveResponse {
+}

@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+option csharp_namespace = "PlotMonster.Client.Plotter.GrpcServer";
+
+package plotManager;
+
+service PlotManager {
+  rpc GetPlotProcesses (PlotProcessesRequest) returns (PlotProcessReply);
+}
+
+message PlotProcessesRequest {
+}
+
+message PlotProcessReply {
+  // return PlotProcessOutput
+}
