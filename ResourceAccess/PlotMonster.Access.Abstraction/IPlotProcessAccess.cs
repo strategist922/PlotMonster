@@ -5,7 +5,6 @@ namespace PlotMonster.Access.Abstraction
 {
     public interface IPlotProcessAccess
     {
-        Task AddPlotProcess(PlotProcessMetadata metadata, CancellationToken cancellationToken);
-        Task<IAsyncEnumerable<List<ChiaPlotOutput>>> GetPlotProcesses(CancellationToken cancellationToken);
+        Task<IAsyncEnumerable<string>> AddPlotProcess(PlotProcessMetadata metadata, CancellationToken cancellationToken);
     }
 }
