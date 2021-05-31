@@ -1,13 +1,18 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\..\ResourceAccess\PlotMonster.ResourceAccess.Implementation\PlotMonster.ResourceAccess.Implementation.csproj" />
+    <ProjectReference Include="..\..\Access\PlotMonster.Access.Abstraction\PlotMonster.Access.Abstraction.csproj" />
     <ProjectReference Include="..\PlotMonster.Business.Abstraction\PlotMonster.Business.Abstraction.csproj" />
     <ProjectReference Include="..\Core.Business.Abstraction\Core.Business.Abstraction.csproj" />
+    <ProjectReference Include="..\..\Utility\Core.Utility.Abstraction\Core.Utility.Abstraction.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Linq.Async" Version="5.0.0" />
+  </ItemGroup>
 
 </Project>
