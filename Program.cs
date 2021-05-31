@@ -25,8 +25,8 @@ namespace chia_plotter
                 { 
                     "/chia/plottemp1",
                     "/chia/plottemp2",
-                    "/chia/plottemp4",
                     "/chia/plottemp3"
+                    // "/chia/plottemp4",
                 };
                 config.DestinationPlotDrives = new List<string>() 
                 { 
@@ -45,8 +45,8 @@ namespace chia_plotter
                     "/chia/plots/202",
                     "/chia/plots/203",
                     "/chia/plots/204",
-                    "/chia/plots/205",
-                    "/chia/plots/206"
+                    "/chia/plots/206",
+                    "/chia/plots/207"
                 };
                 config.KSizes = new List<KSizeMetadata>
                 { 
