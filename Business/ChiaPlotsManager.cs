@@ -46,34 +46,53 @@ namespace chia_plotter.Business.Infrastructure
             // initialization process to start 2 plots per temp drive
             // don't ignore plot drives but do check plot drives are not on the ignoreDrives list.  This will allow us to have the same temp and dest drive and ignore when full.
 // where do I add the logic to stagger?
+            var smallestPlotSize = chiaPlotManagerContextConfiguration.KSizes.OrderBy(k => k.PlotSize).First();
             foreach (var tempDrive in chiaPlotManagerContextConfiguration.TempPlotDrives) 
             {
+                Console.WriteLine($"Starting plots for tempDrive: {tempDrive}");
                 var destinations = new List<string>();
                 while (destinations.Count < maxParallelPlotsPerStagger)
                 {
                     var destination = chiaPlotManagerContextConfiguration.DestinationPlotDrives.Skip(currentDestinationIndex).FirstOrDefault();
-                    if (destination == null)
+                    if (string.IsNullOrEmpty(destination))
                     {
                         currentDestinationIndex = 0;
                         destination = chiaPlotManagerContextConfiguration.DestinationPlotDrives.Skip(currentDestinationIndex).First();
                     }
-                    destinations.Add(destination);
+                    if (ignoredDrives.Any(id => id == destination))
+                    {
+                        currentDestinationIndex++;
+                        continue;
+                    }
+
+                    var destinationInfo = new DriveInfo(destination);
+                    if (destinationInfo.AvailableFreeSpace > smallestPlotSize.PlotSize)
+                    {
+                        destinations.Add(destination);
+                    }
+                    else if (!ignoredDrives.Any(id => id == destination))
+                    {
+                        ignoredDrives.Add(destination);
+                    }
                     currentDestinationIndex++;
                 }
+                Console.WriteLine($"Found {destinations.Count} destination drives to plot to");
                 var innerForEachBreaker = false;
                 foreach(var dest in destinations) 
                 {
                     if (innerForEachBreaker) 
                     {
-                        continue;
+                        break;
                     }
 
                     var process = await startProcess(dest, tempDrive);
                     if (process != null)
                     {
+                        Console.WriteLine($"Started plot process from {tempDrive} to {dest}");
                         var first = await process.Reader.ReadAsync();
                         if (!string.IsNullOrWhiteSpace(first.InvalidDrive)) 
                         {
+                            Console.WriteLine($"Invalid drive {first.InvalidDrive} for plot process from {tempDrive} to {dest}");
                             if (first.InvalidDrive == tempDrive && tempDrive != dest) {
                                 innerForEachBreaker = true;
                                 continue;
@@ -86,6 +105,7 @@ namespace chia_plotter.Business.Infrastructure
                         }
                         else
                         {
+                            Console.WriteLine($"Successfully started plot process from {tempDrive} to {dest}");
                             await foreach(var value in process.Reader.ReadAllAsync())
                             {
                                 if (!string.IsNullOrWhiteSpace(value.Id))
@@ -101,6 +121,10 @@ namespace chia_plotter.Business.Infrastructure
                                 }
                             });
                         }
+                    }
+                    else
+                    {
+                        Console.WriteLine($"NULL PROCESS FOUND FOR: {tempDrive} to {dest}");
                     }
                 }
             }
@@ -259,13 +283,13 @@ namespace chia_plotter.Business.Infrastructure
                 }
                 else
                 {
-                    if (destinationDrive.AvailableFreeSpace > kSize.PlotSize)
+                    if (destinationDrive.AvailableFreeSpace < kSize.PlotSize)
                     {
                         var channel = Channel.CreateBounded<ChiaPlotOutput>(1); 
                         await channel.Writer.WriteAsync(new ChiaPlotOutput { InvalidDrive = destination }); 
                         return channel;
                     }
-                    else if (tempDrive.AvailableFreeSpace > kSize.WorkSize)
+                    else if (tempDrive.AvailableFreeSpace < kSize.WorkSize)
                     {
                         var channel = Channel.CreateBounded<ChiaPlotOutput>(1); 
                         await channel.Writer.WriteAsync(new ChiaPlotOutput { InvalidDrive = temp }); 
