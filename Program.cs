@@ -25,8 +25,8 @@ namespace chia_plotter
                 { 
                     "/chia/plottemp1",
                     "/chia/plottemp2",
-                    "/chia/plottemp3"
-                    // "/chia/plottemp4",
+                    "/chia/plottemp3",
+                    "/chia/plottemp4",
                 };
                 config.DestinationPlotDrives = new List<string>() 
                 { 
