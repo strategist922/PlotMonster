@@ -201,10 +201,10 @@ namespace chia_plotter.Business.Infrastructure
                         var completed = related.Where(o => o.IsPlotComplete);
                         var remaining = related.Where(o => !o.IsPlotComplete);
                         
-                        //1) where get all remaining that is transfering and do not count those
+                        // this isn't going to work unless there is another related temp drive that emits since there is a huge delay between the plot completed output and the transfer completed output.  This is going to become another feature that returns the next available resource to start a process.  so the client periodically checks for the next process and then calls the plot registration feature. need a scheduler and check every 60 seconds. initally it will check faster until it gets a null response and then increase the time. needed so it doesn't rely on the natural output.  This also fixes the first plot problem where if we never get a message, how do we know what to start?  chicken or egg, no longer.
                         if (remaining.Count() < chiaPlotManagerContextConfiguration.PlotsPerDrive
                             && remaining
-                                .Where(o => string.IsNullOrWhiteSpace(o.CurrentPhase) || (o.CurrentPhase == "1" || o.CurrentPhase == "2"))
+                                .Where(o => string.IsNullOrWhiteSpace(o.CurrentPhase) || (o.CurrentPhase == "1"))
                                     .Count() < maxParallelPlotsPerStagger
                             && completed.Where(c => c.IsTransferComplete == false).Count() < chiaPlotManagerContextConfiguration.PlotsPerDrive)
                         {
