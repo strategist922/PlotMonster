@@ -40,11 +40,12 @@ namespace chia_plotter.ResourceAccess.Infrastructure
             process.OutputDataReceived += new DataReceivedEventHandler(async (sender, e) => {
                 await channel.Writer.WriteAsync(e.Data);
             });
+            process.Exited += new System.EventHandler((sender, e) => { channel.Writer.Complete(); });
             process.Start();
             await channel.Writer.WriteAsync($"PROCESSID:{process.Id}");
             process.StandardInput.WriteLine("cd ~/chia-blockchain");
             process.StandardInput.WriteLine(". ./activate");
-            process.StandardInput.WriteLine($"chia plots create -k {kSize} -r {threads} -b {ram} -t {tempDrive} -2 {tempDrive} -d {destDrive}");
+            process.StandardInput.WriteLine($"chia plots create -k {kSize} -r {threads} -b {ram} -t {tempDrive} -2 {tempDrive} -d {tempDrive} -x");
             process.BeginOutputReadLine();
 
             return channel;

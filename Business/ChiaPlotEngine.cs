@@ -17,6 +17,7 @@ namespace chia_plotter.Business.Infrastructure
         public async Task<Channel<ChiaPlotOutput>> Process()
         {
             var channel = await repository.Get();
+            
             var report = new ChiaPlotOutput();
             report.StartTime = DateTime.Now;
             var outputChannel = Channel.CreateUnbounded<ChiaPlotOutput>();
@@ -46,15 +47,10 @@ namespace chia_plotter.Business.Infrastructure
                 }
                 await foreach(var line in channel.ReadAllAsync())
                 {
-                    if (report.IsTransferComplete == true) 
-                    {
-                        await outputChannel.Writer.WriteAsync(report);
-                        break;
-                    }
                     report.Output = line;
                     if (line.IndexOf("Final File size: ") > -1)
                     {
-                        report.IsPlotComplete = true;
+                        
                     }
                     else if (line.IndexOf("Time for phase") > -1)
                     {
@@ -114,7 +110,7 @@ namespace chia_plotter.Business.Infrastructure
                     }
                     else if (line.IndexOf("Copy time =") > -1)
                     {
-                        report.IsTransferComplete = true;
+                        // report.IsTransferComplete = true;
                         report.Duration = DateTime.Now.Subtract(report.StartTime);
                         var copyTime = line.Substring(12);
                         report.CopyTime = copyTime.Substring(0, copyTime.IndexOf(" seconds"));
@@ -125,7 +121,22 @@ namespace chia_plotter.Business.Infrastructure
                         report.IsPlotComplete = true;
                         report.IsTransferComplete = true;
                         report.IsTransferError = true;
-                        // need to start the file transfer and rename
+                        break;
+
+                        // TODO: need to start the file transfer and rename
+                    }
+                    else if (line.IndexOf("Renamed final file from") > -1)
+                    {
+                        //Renamed final file from "g:\\plots\\plot-k32-2021-05-06-03-15-ebff482bedeaa97a11a275eded32ad444e37be0f129369bb781b1824697825.plot.2.tmp" to "g:\\plots\\plot-k32-2021-05-06-03-15-ebff482bedeaa97a11a275e5f3ed32a1b34e37be0f129369bb781b1824697825.plot"
+                        var finalFilePath = line.Substring(line.IndexOf("\" to \"") + 6);
+                        finalFilePath = finalFilePath.Substring(0, finalFilePath.IndexOf(".plot\"") + 5);
+                        report.FinalFilePath = finalFilePath;
+                        report.IsPlotComplete = true;
+                        report.IsTransferComplete = true;
+                        await outputChannel.Writer.WriteAsync(report);
+                        outputChannel.Writer.Complete();
+                        break;
+                        
                     }
                     await outputChannel.Writer.WriteAsync(report);
                 }

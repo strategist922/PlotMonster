@@ -59,20 +59,27 @@ namespace chia_plotter.Business.Infrastructure
                         currentDestinationIndex = 0;
                         destination = chiaPlotManagerContextConfiguration.DestinationPlotDrives.Skip(currentDestinationIndex).First();
                     }
-                    if (ignoredDrives.Any(id => id == destination))
-                    {
-                        currentDestinationIndex++;
-                        continue;
-                    }
 
                     var destinationInfo = new DriveInfo(destination);
-                    if (destinationInfo.AvailableFreeSpace > smallestPlotSize.PlotSize)
+                    
+                    var outputs = uniqueOutputs.Values;
+                    var totalSpaceNeeded = outputs.Where(o => o.IsTransferComplete == false).Where(o => o.DestinationDrive == destination).Select(o => smallestPlotSize.PlotSize).Sum() + smallestPlotSize.PlotSize;
+                    
+                    var gotit = false;
+                    while (gotit == false) 
                     {
-                        destinations.Add(destination);
-                    }
-                    else if (!ignoredDrives.Any(id => id == destination))
-                    {
-                        ignoredDrives.Add(destination);
+                        try
+                        {
+                            if (destinationInfo.AvailableFreeSpace > totalSpaceNeeded) 
+                            {
+                                destinations.Add(destination);
+                            }
+                            gotit = true;
+                        }
+                        catch(Exception ex) 
+                        {
+                            Console.WriteLine($"Ex: {ex.Message}");
+                        }
                     }
                     currentDestinationIndex++;
                 }
@@ -98,10 +105,10 @@ namespace chia_plotter.Business.Infrastructure
                                 continue;
                             }
 
-                            if(!ignoredDrives.Any(id => id == first.InvalidDrive))
-                            {
-                                ignoredDrives.Add(first.InvalidDrive);
-                            }
+                            // if(!ignoredDrives.Any(id => id == first.InvalidDrive))
+                            // {
+                            //     ignoredDrives.Add(first.InvalidDrive);
+                            // }
                         }
                         else
                         {
@@ -132,6 +139,8 @@ namespace chia_plotter.Business.Infrastructure
             // watching process that keeps at least 2 running and will start one when transfer starts
 
             var keepRunning = true;
+            
+            var xferInProgress = new Dictionary<string, Task>();
             while (keepRunning)
             {
                 await foreach(var output in outputChannel.Reader.ReadAllAsync())
@@ -147,53 +156,24 @@ namespace chia_plotter.Business.Infrastructure
                     }
                     uniqueOutputs[output.Id] = output;
                     var outputs = uniqueOutputs.Values;
-                    if (output.IsTransferError) {
-                        // add destination to ignored 
-                        var process = processRepo.GetAll().Where(p => p.Id == output.ProcessId).FirstOrDefault();
-                        process.Kill(true);
-                        process.Close();
-
-                        if(!ignoredDrives.Any(id => id == output.DestinationDrive))
-                        {
-                            ignoredDrives.Add(output.DestinationDrive);
-                        }
-                        // TODO - this needs to remove the incompleted file from the destinaction
-                        // start new transfer process to alternative destination
-                        foreach (var destination in chiaPlotManagerContextConfiguration.DestinationPlotDrives)
-                        {
-                            //var tempFile = Path.Combine(output.TempDrive, $"{output.Id}");
-                            if (!ignoredDrives.Any(id => id == destination)) 
-                            {
-                                var driveInfo = new DriveInfo(destination);
-                                var tempFileName = Directory.GetFiles(output.TempDrive, output.Id).FirstOrDefault();
-
-                                if (string.IsNullOrEmpty(tempFileName)) 
-                                {
-                                    // throw?
-                                    break;
-                                }
-                                var tempFile = new FileInfo(tempFileName);
-                                if (driveInfo.AvailableFreeSpace > tempFile.Length)
-                                {
-                                    var trimmedFileName = tempFileName.Substring(tempFileName.IndexOf("plot-k"));
-                                    trimmedFileName = trimmedFileName.Substring(0, trimmedFileName.IndexOf(".plot.") + 5);
-                                    tempFile.MoveTo(Path.Combine(destination, trimmedFileName), true);
-                                    break;
-                                }
-                            }
-                        }
-                        
-                        var incompleteTransfer = Directory.GetFiles(output.DestinationDrive, output.Id);
-                        foreach (var file in incompleteTransfer) 
-                        {
-                            var incompleteFile = new FileInfo(file);
-                            incompleteFile.Delete();
-                        }
-
-                        output.IsTransferError = false;
-                        
-                    }
                     
+                    // since the destination is the temp drive, we will get the file we need without the .2.tmp
+                    if (!string.IsNullOrEmpty(output.FinalFilePath) && !xferInProgress.ContainsKey(output.Id)) 
+                    {
+                    // we are going to kill the process and move the file ourself.
+                        xferInProgress.Add(output.Id, Task.Run(() => {
+                            var plotFileName = Path.GetFileName(output.FinalFilePath);
+
+                            if (string.IsNullOrEmpty(plotFileName)) 
+                            {
+                                // throw?
+                                return;
+                            }
+                            
+                            File.Move(output.FinalFilePath, Path.Combine(output.DestinationDrive, plotFileName), true);
+                        }));
+                    }
+                 
                     if (!ignoredDrives.Any(d => d == output.DestinationDrive || d == output.TempDrive))
                     {
                         var startNewProcess = false;
@@ -205,44 +185,50 @@ namespace chia_plotter.Business.Infrastructure
                         if (remaining.Count() < chiaPlotManagerContextConfiguration.PlotsPerDrive
                             && remaining
                                 .Where(o => string.IsNullOrWhiteSpace(o.CurrentPhase) || (o.CurrentPhase == "1"))
-                                    .Count() < maxParallelPlotsPerStagger
-                            && completed.Where(c => c.IsTransferComplete == false).Count() < chiaPlotManagerContextConfiguration.PlotsPerDrive)
+                                    .Count() < maxParallelPlotsPerStagger)
                         {
                             startNewProcess = true;
                         }
-
+// so when one gets done, it isn't transfered when the next one starts.  this will cause there to be space not accounted for on the destination.
+// we need to consider tasks not completed.
                         if (startNewProcess)
                         {
-                            var process = await startProcess(output.DestinationDrive, output.TempDrive);
-                            var first = await process.Reader.ReadAsync();
-                      
-                            if (!string.IsNullOrWhiteSpace(first.InvalidDrive)) 
+                            var destinationDrive = string.Empty;
+                            while(string.IsNullOrEmpty(destinationDrive))
                             {
-                                if ((first.InvalidDrive == first.TempDrive && first.TempDrive != first.DestinationDrive) 
-                                    && (!ignoredDrives.Any(id => id == first.InvalidDrive)))
+                                var destination = chiaPlotManagerContextConfiguration.DestinationPlotDrives.Skip(currentDestinationIndex).FirstOrDefault();
+                                if (string.IsNullOrEmpty(destination))
                                 {
-                                    ignoredDrives.Add(first.InvalidDrive);
+                                    currentDestinationIndex = 0;
+                                    destination = chiaPlotManagerContextConfiguration.DestinationPlotDrives.Skip(currentDestinationIndex).First();
+                                }
+
+                                var destinationInfo = new DriveInfo(destination);
+                                var totalSpaceNeeded = outputs.Where(o => o.IsTransferComplete == false).Where(o => o.DestinationDrive == destination).Select(o => smallestPlotSize.PlotSize).Sum() + smallestPlotSize.PlotSize;
+                                if (destinationInfo.AvailableFreeSpace > totalSpaceNeeded) 
+                                {
+                                    destinationDrive = destination;
+                                }
+                                currentDestinationIndex++;
+                            }
+
+                            var process = await startProcess(destinationDrive, output.TempDrive);
+                            var first = await process.Reader.ReadAsync();
+
+                            await foreach(var value in process.Reader.ReadAllAsync())
+                            {
+                                if (!string.IsNullOrWhiteSpace(value.Id))
+                                {
+                                    uniqueOutputs[value.Id] = value;
+                                    break;
                                 }
                             }
-                            else
-                            {
-                                // await outputChannel.Writer.WriteAsync(new ChiaPlotOutput { Id = "static", Output = "started new plot"});
+                            Task task = Task.Run(async () => {
                                 await foreach(var value in process.Reader.ReadAllAsync())
                                 {
-                                    if (!string.IsNullOrWhiteSpace(value.Id))
-                                    {
-                                        uniqueOutputs[value.Id] = value;
-                                        break;
-                                    }
+                                    await outputChannel.Writer.WriteAsync(value);
                                 }
-                                Task task = Task.Run(async () => {
-                                    await foreach(var value in process.Reader.ReadAllAsync())
-                                    {
-                                        await outputChannel.Writer.WriteAsync(value);
-                                    }
-                                });
-                                break;
-                            }
+                            });
                         }
                     }
                     
@@ -267,37 +253,56 @@ namespace chia_plotter.Business.Infrastructure
             var tempDrive = new DriveInfo(temp);
             await tempDriveCleanerDelegate.Invoke(temp);
             ChiaPlotEngine engine = null;
-            foreach(var kSize in chiaPlotManagerContextConfiguration.KSizes) 
-            {
-                if (destinationDrive.AvailableFreeSpace > kSize.PlotSize && tempDrive.AvailableFreeSpace > kSize.WorkSize)
-                {
-                    engine = new ChiaPlotEngine(chiaPlotProcessChannelFactory.Invoke(
-                        temp,
-                        destination,
-                        kSize.K,
-                        kSize.Ram.ToString(),
-                        kSize.Threads.ToString(),
-                        processRepo
-                    ));
-                    return await engine.Process();
-                }
-                else
-                {
-                    if (destinationDrive.AvailableFreeSpace < kSize.PlotSize)
-                    {
-                        var channel = Channel.CreateBounded<ChiaPlotOutput>(1); 
-                        await channel.Writer.WriteAsync(new ChiaPlotOutput { InvalidDrive = destination }); 
-                        return channel;
-                    }
-                    else if (tempDrive.AvailableFreeSpace < kSize.WorkSize)
-                    {
-                        var channel = Channel.CreateBounded<ChiaPlotOutput>(1); 
-                        await channel.Writer.WriteAsync(new ChiaPlotOutput { InvalidDrive = temp }); 
-                        return channel;
-                    }
-                }
-            }
-            throw new Exception("Should not make it here!");
+            var kSize = chiaPlotManagerContextConfiguration.KSizes.Where(k => k.K == "32").First();
+ 
+            engine = new ChiaPlotEngine(chiaPlotProcessChannelFactory.Invoke(
+                temp,
+                destination,
+                kSize.K,
+                kSize.Ram.ToString(),
+                kSize.Threads.ToString(),
+                processRepo
+            ));
+            return await engine.Process();
         }
+
+        // private async Task<Channel<ChiaPlotOutput>> startProcess(string destination, string temp) 
+        // {
+        //     var destinationDrive = new DriveInfo(destination);
+        //     var tempDrive = new DriveInfo(temp);
+        //     await tempDriveCleanerDelegate.Invoke(temp);
+        //     ChiaPlotEngine engine = null;
+        //     foreach(var kSize in chiaPlotManagerContextConfiguration.KSizes) 
+        //     {
+        //         if (destinationDrive.AvailableFreeSpace > kSize.PlotSize && tempDrive.AvailableFreeSpace > kSize.WorkSize)
+        //         {
+        //             engine = new ChiaPlotEngine(chiaPlotProcessChannelFactory.Invoke(
+        //                 temp,
+        //                 destination,
+        //                 kSize.K,
+        //                 kSize.Ram.ToString(),
+        //                 kSize.Threads.ToString(),
+        //                 processRepo
+        //             ));
+        //             return await engine.Process();
+        //         }
+        //         else
+        //         {
+        //             if (destinationDrive.AvailableFreeSpace < kSize.PlotSize)
+        //             {
+        //                 var channel = Channel.CreateBounded<ChiaPlotOutput>(1); 
+        //                 await channel.Writer.WriteAsync(new ChiaPlotOutput { InvalidDrive = destination }); 
+        //                 return channel;
+        //             }
+        //             else if (tempDrive.AvailableFreeSpace < kSize.WorkSize)
+        //             {
+        //                 var channel = Channel.CreateBounded<ChiaPlotOutput>(1); 
+        //                 await channel.Writer.WriteAsync(new ChiaPlotOutput { InvalidDrive = temp }); 
+        //                 return channel;
+        //             }
+        //         }
+        //     }
+        //     throw new Exception("Should not make it here!");
+        // }
     }
 }

@@ -20,5 +20,6 @@ namespace chia_plotter.Business.Abstraction
         public int ProcessId {get;set;}
         public DateTime StartTime {get;set;}
         public TimeSpan Duration {get;set;}
+        public string FinalFilePath {get;set;}
     }
 }

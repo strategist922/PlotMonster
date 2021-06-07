@@ -15,7 +15,7 @@ namespace chia_plotter
     {
         static async Task Main(string[] args)
         {
-            var testing = false;
+            var testing = true;
             var repo = new ChiaPlotProcessRepository();
             try
             {
@@ -42,11 +42,25 @@ namespace chia_plotter
                     // "/chia/plots/109" 
                     // "/chia/plots/200", 
                     // "/chia/plots/201",
-                    "/chia/plots/202",
+                    // "/chia/plots/202",
                     "/chia/plots/203",
                     "/chia/plots/204",
                     "/chia/plots/206",
-                    "/chia/plots/207"
+                    "/chia/plots/207",
+                    "/chia/plots/share/100",
+                    "/chia/plots/share/101",
+                    "/chia/plots/share/102",
+                    "/chia/plots/share/103",
+                    "/chia/plots/share/104",
+                    "/chia/plots/share/105",
+                    "/chia/plots/share/106",
+                    "/chia/plots/share/107",
+                    "/chia/plots/share/108",
+                    "/chia/plots/share/109",
+                    "/chia/plots/share/200",
+                    "/chia/plots/share/201",
+                    "/chia/plots/share/208",
+                    "/chia/plots/share/209"
                 };
                 config.KSizes = new List<KSizeMetadata>
                 { 
@@ -83,7 +97,7 @@ namespace chia_plotter
                         // TODO - make configurable
                         const int maxDisplayColumnWidth = 6;
                         var displayBuilder = new DisplayBuilder();
-                        foreach (var uniqueOutput in outputs.Where(o => o.IsTransferComplete == false).OrderBy(o => o.TempDrive)) 
+                        foreach (var uniqueOutput in outputs.Where(o => o.IsTransferComplete == false).OrderBy(o => o.CurrentPhase)) 
                         {   
                             displayBuilder = BuildDisplay(displayBuilder, uniqueOutput);
                             displayColumnIndex++;
@@ -161,13 +175,22 @@ namespace chia_plotter
                 var processes = repo.GetAll();
                 foreach(var process in processes)
                 {
-                    if (process.HasExited)
+                    try
                     {
-                        continue;
+                        if (process.HasExited)
+                        {
+                            continue;
+                        }
+                        Console.WriteLine($"Killing process {process.Id}");
+                        
+                        process.Kill(true);
+                        process.Close();
                     }
-                    Console.WriteLine($"Killing process {process.Id}");
-                    process.Kill(true);
-                    process.Close();
+                    catch(InvalidOperationException)
+                    {
+                        
+                    }
+                    
                 }
                 Console.WriteLine("Done... press any key to exit");
                 Console.ReadLine();
