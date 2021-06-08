@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using chia_plotter.Business.Abstraction;
 using chia_plotter.ResourceAccess.Abstraction;
 using chia_plotter.ResourceAccess.Infrastructure;
+using Microsoft.Extensions.Logging;
 
 namespace chia_plotter.Business.Infrastructure
 {
@@ -18,6 +19,7 @@ namespace chia_plotter.Business.Infrastructure
         private readonly Func<string, string, string, string, string, ChiaPlotProcessRepository, IChiaPlotProcessChannel> chiaPlotProcessChannelFactory;
         private readonly Action<ICollection<ChiaPlotOutput>, StringBuilder> allOutputsDelegate;
         private readonly Func<string, Task> tempDriveCleanerDelegate;
+        private readonly ILogger<ChiaPlotsManager> logger;
 
         private readonly ChiaPlotProcessRepository processRepo;
         public ChiaPlotsManager(
@@ -25,7 +27,8 @@ namespace chia_plotter.Business.Infrastructure
             ChiaPlotProcessRepository processRepo,
             Func<string, string, string, string, string, ChiaPlotProcessRepository, IChiaPlotProcessChannel> chiaPlotProcessChannelFactory,
             Action<ICollection<ChiaPlotOutput>, StringBuilder> allOutputsDelegate,
-            Func<string, Task> tempDriveCleanerDelegate
+            Func<string, Task> tempDriveCleanerDelegate,
+            ILogger<ChiaPlotsManager> logger
             )
         {
             this.chiaPlotManagerContextConfiguration = chiaPlotManagerContextConfiguration;
@@ -33,6 +36,7 @@ namespace chia_plotter.Business.Infrastructure
             this.chiaPlotProcessChannelFactory = chiaPlotProcessChannelFactory;
             this.allOutputsDelegate = allOutputsDelegate;
             this.tempDriveCleanerDelegate = tempDriveCleanerDelegate;
+            this.logger = logger;
         }
 
         public async Task Process() 
@@ -78,12 +82,12 @@ namespace chia_plotter.Business.Infrastructure
                         }
                         catch(Exception ex) 
                         {
-                            Console.WriteLine($"Ex: {ex.Message}");
+                            logger.LogError(ex, $"Found during destinationInfo invoke for {destination}");
                         }
                     }
                     currentDestinationIndex++;
                 }
-                Console.WriteLine($"Found {destinations.Count} destination drives to plot to");
+
                 var innerForEachBreaker = false;
                 foreach(var dest in destinations) 
                 {
@@ -95,7 +99,6 @@ namespace chia_plotter.Business.Infrastructure
                     var process = await startProcess(dest, tempDrive);
                     if (process != null)
                     {
-                        Console.WriteLine($"Started plot process from {tempDrive} to {dest}");
                         var first = await process.Reader.ReadAsync();
                         if (!string.IsNullOrWhiteSpace(first.InvalidDrive)) 
                         {
@@ -112,7 +115,6 @@ namespace chia_plotter.Business.Infrastructure
                         }
                         else
                         {
-                            Console.WriteLine($"Successfully started plot process from {tempDrive} to {dest}");
                             await foreach(var value in process.Reader.ReadAllAsync())
                             {
                                 if (!string.IsNullOrWhiteSpace(value.Id))
@@ -169,8 +171,24 @@ namespace chia_plotter.Business.Infrastructure
                                 // throw?
                                 return;
                             }
-                            
-                            File.Move(output.FinalFilePath, Path.Combine(output.DestinationDrive, plotFileName), true);
+                            // this can fail is drive is not accessable...
+                            // this is why this should happen as a feature... then this can return a destination. the feature can then move something
+                            while (true)
+                            {
+                                // this should be wrapped in a repository to handle the retry logic.
+                                try 
+                                {
+                                    File.Move(output.FinalFilePath, Path.Combine(output.DestinationDrive, plotFileName), true);
+                                    break;
+                                }
+                                catch(Exception ex)
+                                {
+                                    logger.LogError(ex, $"Error while moving file from {output.FinalFilePath} to {Path.Combine(output.DestinationDrive, plotFileName)}.");
+                                    // log so we can handle different errors.
+                                    // this could get into an infnite loop where destination is full
+                                    //      just another reason for it to be a feature
+                                }
+                            }
                         }));
                     }
                  

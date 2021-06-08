@@ -8,14 +8,44 @@ using System.Threading.Tasks;
 using chia_plotter.Business.Abstraction;
 using chia_plotter.Business.Infrastructure;
 using chia_plotter.ResourceAccess.Infrastructure;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
+using NLog.Extensions.Logging;
+using NLog;
+using Microsoft.Extensions.Logging;
 
 namespace chia_plotter
 {
     class Program
     {
+        private static void ConfigureServices(IServiceCollection services)
+        {
+            var config = new ConfigurationBuilder()
+                .SetBasePath(System.IO.Directory.GetCurrentDirectory())
+                .AddJsonFile("app-settings.json", optional: false, reloadOnChange: true)
+                .Build();
+
+            services.AddLogging(builder => {
+                
+
+                builder.AddNLog(new NLogLoggingConfiguration(config.GetSection("NLog")));
+            });
+            
+            services.AddSingleton<ILoggerFactory, LoggerFactory>();
+            services.AddSingleton(typeof(ILogger<>), typeof(Logger<>));
+            
+        }
+        
         static async Task Main(string[] args)
         {
-            var testing = true;
+            var testing = false;
+
+            var serviceCollection = new ServiceCollection();
+            ConfigureServices(serviceCollection);
+
+            var serviceProvider = serviceCollection.BuildServiceProvider(); 
+            var chiaPlotsManagerLogger = serviceProvider.GetRequiredService<ILogger<ChiaPlotsManager>>();
+
             var repo = new ChiaPlotProcessRepository();
             try
             {
@@ -43,8 +73,8 @@ namespace chia_plotter
                     // "/chia/plots/200", 
                     // "/chia/plots/201",
                     // "/chia/plots/202",
-                    "/chia/plots/203",
-                    "/chia/plots/204",
+                    // "/chia/plots/203",
+                    // "/chia/plots/204",
                     "/chia/plots/206",
                     "/chia/plots/207",
                     "/chia/plots/share/100",
@@ -158,7 +188,8 @@ namespace chia_plotter
                             Console.WriteLine(ex.StackTrace);
                         }
                         return Task.CompletedTask;
-                    }
+                    },
+                    chiaPlotsManagerLogger
                 );
                 await manager.Process();
             }
