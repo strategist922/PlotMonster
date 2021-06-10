@@ -18,21 +18,27 @@ namespace chia_plotter
 {
     class Program
     {
-        private static void ConfigureServices(IServiceCollection services)
+        private static IServiceProvider ConfigureServices(IServiceCollection services)
         {
             var config = new ConfigurationBuilder()
                 .SetBasePath(System.IO.Directory.GetCurrentDirectory())
                 .AddJsonFile("app-settings.json", optional: false, reloadOnChange: true)
                 .Build();
 
+            // NLog.LogManager.LoadConfiguration("NLog.config");
             services.AddLogging(builder => {
                 
-
-                builder.AddNLog(new NLogLoggingConfiguration(config.GetSection("NLog")));
+                // Console.WriteLine("ADDING NLOG");
+                // builder.AddNLog(new NLogLoggingConfiguration(config.GetSection("NLog")));
+                
+                // builder.AddNLog("NLog.config");
+                builder.AddNLog("NLog.config");
             });
-            
-            services.AddSingleton<ILoggerFactory, LoggerFactory>();
             services.AddSingleton(typeof(ILogger<>), typeof(Logger<>));
+            var serviceProvider = services.BuildServiceProvider(); 
+
+            return serviceProvider;
+            // services.AddSingleton<ILoggerFactory, LoggerFactory>();
             
         }
         
@@ -41,11 +47,12 @@ namespace chia_plotter
             var testing = false;
 
             var serviceCollection = new ServiceCollection();
-            ConfigureServices(serviceCollection);
+            var serviceProvider = ConfigureServices(serviceCollection);
 
-            var serviceProvider = serviceCollection.BuildServiceProvider(); 
+            var programLogger = serviceProvider.GetRequiredService<ILogger<Program>>();
             var chiaPlotsManagerLogger = serviceProvider.GetRequiredService<ILogger<ChiaPlotsManager>>();
-
+            var baseDir = Directory.GetCurrentDirectory();
+            
             var repo = new ChiaPlotProcessRepository();
             try
             {
@@ -164,8 +171,8 @@ namespace chia_plotter
                         var avg = outputs.Where(o => o.IsTransferComplete && o.Duration != default).Select(o => o.Duration);
                         var averageTime = TimeSpan.FromSeconds(avg.Any() ? avg.Average(timespan => timespan.TotalSeconds) : 0);
                         var skippedTempDrive = outputs.Where(o => o.InvalidDrive == o.TempDrive && o.TempDrive != o.DestinationDrive);
-                        Console.WriteLine($"Completed: {outputs.Where(o => o.IsTransferComplete).Count()} plots with an average time of {averageTime.Hours}:{averageTime.Minutes}:{averageTime.Seconds}");
-                        Console.WriteLine($"Skipped {skippedTempDrive.Count()} temp drive{(skippedTempDrive.Count() != 1 ? "s" : string.Empty)}.");
+                        programLogger.LogInformation($"Completed: {outputs.Where(o => o.IsTransferComplete).Count()} plots with an average time of {averageTime.Hours}:{averageTime.Minutes}:{averageTime.Seconds}");
+                        programLogger.LogInformation($"Skipped {skippedTempDrive.Count()} temp drive{(skippedTempDrive.Count() != 1 ? "s" : string.Empty)}.");
                         // Console.WriteLine(staticTextStringBuilder.ToString());
                     },
                     tempDrive => 
@@ -186,6 +193,7 @@ namespace chia_plotter
                             Console.WriteLine($"Exception");
                             Console.WriteLine(ex.Message);
                             Console.WriteLine(ex.StackTrace);
+                            programLogger.LogError(ex, "Clean trash exception");
                         }
                         return Task.CompletedTask;
                     },
@@ -198,7 +206,7 @@ namespace chia_plotter
                 Console.WriteLine($"Exception");
                 Console.WriteLine(ex.Message);
                 Console.WriteLine(ex.StackTrace);
-                
+                programLogger.LogError(ex, "Main exception");
             }
             finally
             {

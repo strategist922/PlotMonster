@@ -1,22 +1,3 @@
 {
-    "NLog": {
-        "throwConfigExceptions": true,
-        "targets": {
-          "async": true,
-          "logfile": {
-            "type": "File",
-            "fileName": "/chia/apps/logs/nlog-${shortdate}.log"
-          },
-          "logconsole": {
-            "type": "Console"
-          }
-        },
-        "rules": [
-          {
-            "logger": "*",
-            "minLevel": "Debug",
-            "writeTo": "logfile"
-          }
-        ]
-      }
+   
 }

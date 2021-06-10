@@ -53,7 +53,7 @@ namespace chia_plotter.Business.Infrastructure
             var smallestPlotSize = chiaPlotManagerContextConfiguration.KSizes.OrderBy(k => k.PlotSize).First();
             foreach (var tempDrive in chiaPlotManagerContextConfiguration.TempPlotDrives) 
             {
-                Console.WriteLine($"Starting plots for tempDrive: {tempDrive}");
+                logger.LogInformation($"Starting plots for tempDrive: {tempDrive}");
                 var destinations = new List<string>();
                 while (destinations.Count < maxParallelPlotsPerStagger)
                 {
@@ -102,7 +102,7 @@ namespace chia_plotter.Business.Infrastructure
                         var first = await process.Reader.ReadAsync();
                         if (!string.IsNullOrWhiteSpace(first.InvalidDrive)) 
                         {
-                            Console.WriteLine($"Invalid drive {first.InvalidDrive} for plot process from {tempDrive} to {dest}");
+                            logger.LogWarning($"Invalid drive {first.InvalidDrive} for plot process from {tempDrive} to {dest}");
                             if (first.InvalidDrive == tempDrive && tempDrive != dest) {
                                 innerForEachBreaker = true;
                                 continue;
@@ -133,7 +133,7 @@ namespace chia_plotter.Business.Infrastructure
                     }
                     else
                     {
-                        Console.WriteLine($"NULL PROCESS FOUND FOR: {tempDrive} to {dest}");
+                        logger.LogWarning($"NULL PROCESS FOUND FOR: {tempDrive} to {dest}");
                     }
                 }
             }
@@ -142,7 +142,7 @@ namespace chia_plotter.Business.Infrastructure
 
             var keepRunning = true;
             
-            var xferInProgress = new Dictionary<string, Task>();
+            // var xferInProgress = new Dictionary<string, Task>();
             while (keepRunning)
             {
                 await foreach(var output in outputChannel.Reader.ReadAllAsync())
@@ -160,37 +160,38 @@ namespace chia_plotter.Business.Infrastructure
                     var outputs = uniqueOutputs.Values;
                     
                     // since the destination is the temp drive, we will get the file we need without the .2.tmp
-                    if (!string.IsNullOrEmpty(output.FinalFilePath) && !xferInProgress.ContainsKey(output.Id)) 
-                    {
-                    // we are going to kill the process and move the file ourself.
-                        xferInProgress.Add(output.Id, Task.Run(() => {
-                            var plotFileName = Path.GetFileName(output.FinalFilePath);
-
-                            if (string.IsNullOrEmpty(plotFileName)) 
-                            {
-                                // throw?
-                                return;
-                            }
-                            // this can fail is drive is not accessable...
-                            // this is why this should happen as a feature... then this can return a destination. the feature can then move something
-                            while (true)
-                            {
-                                // this should be wrapped in a repository to handle the retry logic.
-                                try 
-                                {
-                                    File.Move(output.FinalFilePath, Path.Combine(output.DestinationDrive, plotFileName), true);
-                                    break;
-                                }
-                                catch(Exception ex)
-                                {
-                                    logger.LogError(ex, $"Error while moving file from {output.FinalFilePath} to {Path.Combine(output.DestinationDrive, plotFileName)}.");
-                                    // log so we can handle different errors.
-                                    // this could get into an infnite loop where destination is full
-                                    //      just another reason for it to be a feature
-                                }
-                            }
-                        }));
-                    }
+                    // if (!string.IsNullOrEmpty(output.FinalFilePath) && !xferInProgress.ContainsKey(output.Id)) 
+                    // {
+                    //     logger.LogInformation($"Transfering file {output.FinalFilePath} to {output.DestinationDrive}");
+                    // // we are going to kill the process and move the file ourself.
+                    //     xferInProgress.Add(output.Id, Task.Run(() => {
+                    //         var plotFileName = Path.GetFileName(output.FinalFilePath);
+                    //         logger.LogInformation($"Transfering file {output.FinalFilePath} to {output.DestinationDrive}");
+                    //         if (string.IsNullOrEmpty(plotFileName)) 
+                    //         {
+                    //             // throw?
+                    //             return;
+                    //         }
+                    //         // this can fail is drive is not accessable...
+                    //         // this is why this should happen as a feature... then this can return a destination. the feature can then move something
+                    //         while (true)
+                    //         {
+                    //             // this should be wrapped in a repository to handle the retry logic.
+                    //             try 
+                    //             {
+                    //                 File.Move(output.FinalFilePath, Path.Combine(output.DestinationDrive, plotFileName), true);
+                    //                 break;
+                    //             }
+                    //             catch(Exception ex)
+                    //             {
+                    //                 logger.LogError(ex, $"Error while moving file from {output.FinalFilePath} to {Path.Combine(output.DestinationDrive, plotFileName)}.");
+                    //                 // log so we can handle different errors.
+                    //                 // this could get into an infnite loop where destination is full
+                    //                 //      just another reason for it to be a feature
+                    //             }
+                    //         }
+                    //     }));
+                    // }
                  
                     if (!ignoredDrives.Any(d => d == output.DestinationDrive || d == output.TempDrive))
                     {
