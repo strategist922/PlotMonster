@@ -45,7 +45,7 @@ namespace chia_plotter.ResourceAccess.Infrastructure
             await channel.Writer.WriteAsync($"PROCESSID:{process.Id}");
             process.StandardInput.WriteLine("cd ~/chia-blockchain");
             process.StandardInput.WriteLine(". ./activate");
-            process.StandardInput.WriteLine($"chia plots create -k {kSize} -r {threads} -b {ram} -t {tempDrive} -2 {tempDrive} -d {tempDrive} -x");
+            process.StandardInput.WriteLine($"chia plots create -k {kSize} -r {threads} -b {ram} -t {tempDrive} -2 {tempDrive} -d {destDrive} -x");
             process.BeginOutputReadLine();
 
             return channel;

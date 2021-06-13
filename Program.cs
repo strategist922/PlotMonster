@@ -82,8 +82,8 @@ namespace chia_plotter
                     // "/chia/plots/202",
                     // "/chia/plots/203",
                     // "/chia/plots/204",
-                    "/chia/plots/206",
-                    "/chia/plots/207",
+                    // "/chia/plots/206",
+                    // "/chia/plots/207",
                     "/chia/plots/share/100",
                     "/chia/plots/share/101",
                     "/chia/plots/share/102",
@@ -96,6 +96,12 @@ namespace chia_plotter
                     "/chia/plots/share/109",
                     "/chia/plots/share/200",
                     "/chia/plots/share/201",
+                    "/chia/plots/share/202",
+                    "/chia/plots/share/203",
+                    "/chia/plots/share/204",
+                    "/chia/plots/share/205",
+                    "/chia/plots/share/206",
+                    "/chia/plots/share/207",
                     "/chia/plots/share/208",
                     "/chia/plots/share/209"
                 };

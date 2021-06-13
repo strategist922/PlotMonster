@@ -10,6 +10,7 @@ using chia_plotter.Business.Abstraction;
 using chia_plotter.ResourceAccess.Abstraction;
 using chia_plotter.ResourceAccess.Infrastructure;
 using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
 
 namespace chia_plotter.Business.Infrastructure
 {
@@ -20,6 +21,9 @@ namespace chia_plotter.Business.Infrastructure
         private readonly Action<ICollection<ChiaPlotOutput>, StringBuilder> allOutputsDelegate;
         private readonly Func<string, Task> tempDriveCleanerDelegate;
         private readonly ILogger<ChiaPlotsManager> logger;
+        private readonly Channel<ChiaPlotOutput> outputChannel;
+        private readonly ICollection<Task> runningTasks;
+        private readonly IDictionary<string, ChiaPlotOutput> uniOutputs;
 
         private readonly ChiaPlotProcessRepository processRepo;
         public ChiaPlotsManager(
@@ -37,13 +41,16 @@ namespace chia_plotter.Business.Infrastructure
             this.allOutputsDelegate = allOutputsDelegate;
             this.tempDriveCleanerDelegate = tempDriveCleanerDelegate;
             this.logger = logger;
+
+            this.outputChannel = Channel.CreateUnbounded<ChiaPlotOutput>();
+            this.runningTasks = new List<Task>();
+            this.uniOutputs = new ConcurrentDictionary<string, ChiaPlotOutput>();
         }
 
         public async Task Process() 
         {
-            var currentDestinationIndex = 0;
-            var uniqueOutputs = new Dictionary<string, ChiaPlotOutput>();
-            var outputChannel = Channel.CreateUnbounded<ChiaPlotOutput>();
+            // var currentDestinationIndex = 0;
+            // var uniqueOutputs = new Dictionary<string, ChiaPlotOutput>();
             var ignoredDrives = new List<string>();
             var staticText = new StringBuilder();
             var maxParallelPlotsPerStagger = 4;
@@ -54,88 +61,89 @@ namespace chia_plotter.Business.Infrastructure
             foreach (var tempDrive in chiaPlotManagerContextConfiguration.TempPlotDrives) 
             {
                 logger.LogInformation($"Starting plots for tempDrive: {tempDrive}");
-                var destinations = new List<string>();
-                while (destinations.Count < maxParallelPlotsPerStagger)
-                {
-                    var destination = chiaPlotManagerContextConfiguration.DestinationPlotDrives.Skip(currentDestinationIndex).FirstOrDefault();
-                    if (string.IsNullOrEmpty(destination))
-                    {
-                        currentDestinationIndex = 0;
-                        destination = chiaPlotManagerContextConfiguration.DestinationPlotDrives.Skip(currentDestinationIndex).First();
-                    }
+                await startProcess(tempDrive, tempDrive);
+                // var destinations = new List<string>();
+                // while (destinations.Count < maxParallelPlotsPerStagger)
+                // {
+                //     var destination = chiaPlotManagerContextConfiguration.DestinationPlotDrives.Skip(currentDestinationIndex).FirstOrDefault();
+                //     if (string.IsNullOrEmpty(destination))
+                //     {
+                //         currentDestinationIndex = 0;
+                //         destination = chiaPlotManagerContextConfiguration.DestinationPlotDrives.Skip(currentDestinationIndex).First();
+                //     }
 
-                    var destinationInfo = new DriveInfo(destination);
+                //     var destinationInfo = new DriveInfo(destination);
                     
-                    var outputs = uniqueOutputs.Values;
-                    var totalSpaceNeeded = outputs.Where(o => o.IsTransferComplete == false).Where(o => o.DestinationDrive == destination).Select(o => smallestPlotSize.PlotSize).Sum() + smallestPlotSize.PlotSize;
+                //     var outputs = uniqueOutputs.Values;
+                //     var totalSpaceNeeded = outputs.Where(o => o.IsTransferComplete == false).Where(o => o.DestinationDrive == destination).Select(o => smallestPlotSize.PlotSize).Sum() + smallestPlotSize.PlotSize;
                     
-                    var gotit = false;
-                    while (gotit == false) 
-                    {
-                        try
-                        {
-                            if (destinationInfo.AvailableFreeSpace > totalSpaceNeeded) 
-                            {
-                                destinations.Add(destination);
-                            }
-                            gotit = true;
-                        }
-                        catch(Exception ex) 
-                        {
-                            logger.LogError(ex, $"Found during destinationInfo invoke for {destination}");
-                        }
-                    }
-                    currentDestinationIndex++;
-                }
+                //     var gotit = false;
+                //     while (gotit == false) 
+                //     {
+                //         try
+                //         {
+                //             if (destinationInfo.AvailableFreeSpace > totalSpaceNeeded) 
+                //             {
+                //                 destinations.Add(destination);
+                //             }
+                //             gotit = true;
+                //         }
+                //         catch(Exception ex) 
+                //         {
+                //             logger.LogError(ex, $"Found during destinationInfo invoke for {destination}");
+                //         }
+                //     }
+                //     currentDestinationIndex++;
+                // }
 
-                var innerForEachBreaker = false;
-                foreach(var dest in destinations) 
-                {
-                    if (innerForEachBreaker) 
-                    {
-                        break;
-                    }
+                // var innerForEachBreaker = false;
+                // foreach(var dest in destinations) 
+                // {
+                //     if (innerForEachBreaker) 
+                //     {
+                //         break;
+                //     }
 
-                    var process = await startProcess(dest, tempDrive);
-                    if (process != null)
-                    {
-                        var first = await process.Reader.ReadAsync();
-                        if (!string.IsNullOrWhiteSpace(first.InvalidDrive)) 
-                        {
-                            logger.LogWarning($"Invalid drive {first.InvalidDrive} for plot process from {tempDrive} to {dest}");
-                            if (first.InvalidDrive == tempDrive && tempDrive != dest) {
-                                innerForEachBreaker = true;
-                                continue;
-                            }
+                //     var process = await startProcess(dest, tempDrive);
+                //     if (process != null)
+                //     {
+                //         var first = await process.Reader.ReadAsync();
+                //         if (!string.IsNullOrWhiteSpace(first.InvalidDrive)) 
+                //         {
+                //             logger.LogWarning($"Invalid drive {first.InvalidDrive} for plot process from {tempDrive} to {dest}");
+                //             if (first.InvalidDrive == tempDrive && tempDrive != dest) {
+                //                 innerForEachBreaker = true;
+                //                 continue;
+                //             }
 
-                            // if(!ignoredDrives.Any(id => id == first.InvalidDrive))
-                            // {
-                            //     ignoredDrives.Add(first.InvalidDrive);
-                            // }
-                        }
-                        else
-                        {
-                            await foreach(var value in process.Reader.ReadAllAsync())
-                            {
-                                if (!string.IsNullOrWhiteSpace(value.Id))
-                                {
-                                    uniqueOutputs[value.Id] = value;
-                                    break;
-                                }
-                            }
-                            Task task = Task.Run(async () => {
-                                await foreach(var value in process.Reader.ReadAllAsync())
-                                {
-                                    await outputChannel.Writer.WriteAsync(value);
-                                }
-                            });
-                        }
-                    }
-                    else
-                    {
-                        logger.LogWarning($"NULL PROCESS FOUND FOR: {tempDrive} to {dest}");
-                    }
-                }
+                //             // if(!ignoredDrives.Any(id => id == first.InvalidDrive))
+                //             // {
+                //             //     ignoredDrives.Add(first.InvalidDrive);
+                //             // }
+                //         }
+                //         else
+                //         {
+                //             await foreach(var value in process.Reader.ReadAllAsync())
+                //             {
+                //                 if (!string.IsNullOrWhiteSpace(value.Id))
+                //                 {
+                //                     uniqueOutputs[value.Id] = value;
+                //                     break;
+                //                 }
+                //             }
+                //             Task task = Task.Run(async () => {
+                //                 await foreach(var value in process.Reader.ReadAllAsync())
+                //                 {
+                //                     await outputChannel.Writer.WriteAsync(value);
+                //                 }
+                //             });
+                //         }
+                //     }
+                //     else
+                //     {
+                //         logger.LogWarning($"NULL PROCESS FOUND FOR: {tempDrive} to {dest}");
+                //     }
+                // }
             }
 
             // watching process that keeps at least 2 running and will start one when transfer starts
@@ -156,8 +164,8 @@ namespace chia_plotter.Business.Infrastructure
                         staticText.AppendLine(output.Output);
                         continue;
                     }
-                    uniqueOutputs[output.Id] = output;
-                    var outputs = uniqueOutputs.Values;
+                    uniOutputs[output.Id] = output;
+                    var outputs = uniOutputs.Values;
                     
                     // since the destination is the temp drive, we will get the file we need without the .2.tmp
                     // if (!string.IsNullOrEmpty(output.FinalFilePath) && !xferInProgress.ContainsKey(output.Id)) 
@@ -193,9 +201,9 @@ namespace chia_plotter.Business.Infrastructure
                     //     }));
                     // }
                  
-                    if (!ignoredDrives.Any(d => d == output.DestinationDrive || d == output.TempDrive))
-                    {
-                        var startNewProcess = false;
+                    // if (!ignoredDrives.Any(d => d == output.DestinationDrive || d == output.TempDrive))
+                    // {
+                    //     var startNewProcess = false;
                         var related = outputs.Where(o => o.TempDrive == output.TempDrive);
                         var completed = related.Where(o => o.IsPlotComplete);
                         var remaining = related.Where(o => !o.IsPlotComplete);
@@ -206,50 +214,50 @@ namespace chia_plotter.Business.Infrastructure
                                 .Where(o => string.IsNullOrWhiteSpace(o.CurrentPhase) || (o.CurrentPhase == "1"))
                                     .Count() < maxParallelPlotsPerStagger)
                         {
-                            startNewProcess = true;
+                            await startProcess(output.TempDrive, output.TempDrive);
                         }
 // so when one gets done, it isn't transfered when the next one starts.  this will cause there to be space not accounted for on the destination.
 // we need to consider tasks not completed.
-                        if (startNewProcess)
-                        {
-                            var destinationDrive = string.Empty;
-                            while(string.IsNullOrEmpty(destinationDrive))
-                            {
-                                var destination = chiaPlotManagerContextConfiguration.DestinationPlotDrives.Skip(currentDestinationIndex).FirstOrDefault();
-                                if (string.IsNullOrEmpty(destination))
-                                {
-                                    currentDestinationIndex = 0;
-                                    destination = chiaPlotManagerContextConfiguration.DestinationPlotDrives.Skip(currentDestinationIndex).First();
-                                }
+                        // if (startNewProcess)
+                        // {
+                        //     var destinationDrive = string.Empty;
+                        //     while(string.IsNullOrEmpty(destinationDrive))
+                        //     {
+                        //         var destination = chiaPlotManagerContextConfiguration.DestinationPlotDrives.Skip(currentDestinationIndex).FirstOrDefault();
+                        //         if (string.IsNullOrEmpty(destination))
+                        //         {
+                        //             currentDestinationIndex = 0;
+                        //             destination = chiaPlotManagerContextConfiguration.DestinationPlotDrives.Skip(currentDestinationIndex).First();
+                        //         }
 
-                                var destinationInfo = new DriveInfo(destination);
-                                var totalSpaceNeeded = outputs.Where(o => o.IsTransferComplete == false).Where(o => o.DestinationDrive == destination).Select(o => smallestPlotSize.PlotSize).Sum() + smallestPlotSize.PlotSize;
-                                if (destinationInfo.AvailableFreeSpace > totalSpaceNeeded) 
-                                {
-                                    destinationDrive = destination;
-                                }
-                                currentDestinationIndex++;
-                            }
+                        //         var destinationInfo = new DriveInfo(destination);
+                        //         var totalSpaceNeeded = outputs.Where(o => o.IsTransferComplete == false).Where(o => o.DestinationDrive == destination).Select(o => smallestPlotSize.PlotSize).Sum() + smallestPlotSize.PlotSize;
+                        //         if (destinationInfo.AvailableFreeSpace > totalSpaceNeeded) 
+                        //         {
+                        //             destinationDrive = destination;
+                        //         }
+                        //         currentDestinationIndex++;
+                        //     }
 
-                            var process = await startProcess(destinationDrive, output.TempDrive);
-                            var first = await process.Reader.ReadAsync();
+                        //     var process = await startProcess(destinationDrive, output.TempDrive);
+                        //     var first = await process.Reader.ReadAsync();
 
-                            await foreach(var value in process.Reader.ReadAllAsync())
-                            {
-                                if (!string.IsNullOrWhiteSpace(value.Id))
-                                {
-                                    uniqueOutputs[value.Id] = value;
-                                    break;
-                                }
-                            }
-                            Task task = Task.Run(async () => {
-                                await foreach(var value in process.Reader.ReadAllAsync())
-                                {
-                                    await outputChannel.Writer.WriteAsync(value);
-                                }
-                            });
-                        }
-                    }
+                        //     await foreach(var value in process.Reader.ReadAllAsync())
+                        //     {
+                        //         if (!string.IsNullOrWhiteSpace(value.Id))
+                        //         {
+                        //             uniqueOutputs[value.Id] = value;
+                        //             break;
+                        //         }
+                        //     }
+                        //     Task task = Task.Run(async () => {
+                        //         await foreach(var value in process.Reader.ReadAllAsync())
+                        //         {
+                        //             await outputChannel.Writer.WriteAsync(value);
+                        //         }
+                        //     });
+                        // }
+                    // }
                     
                     var ignoredDrivesOutput = new StringBuilder();
                     ignoredDrivesOutput.Append("Ingored Drives: ");
@@ -257,19 +265,19 @@ namespace chia_plotter.Business.Infrastructure
                     ignoredDrivesOutput.AppendLine(staticText.ToString());
                     allOutputsDelegate.Invoke(outputs, ignoredDrivesOutput);
                 }
-                keepRunning = (chiaPlotManagerContextConfiguration.TempPlotDrives.All(t => ignoredDrives.Any(i => i == t)) || chiaPlotManagerContextConfiguration.DestinationPlotDrives.All(t => ignoredDrives.Any(i => i == t))) == false;
+                // keepRunning = (chiaPlotManagerContextConfiguration.TempPlotDrives.All(t => ignoredDrives.Any(i => i == t)) || chiaPlotManagerContextConfiguration.DestinationPlotDrives.All(t => ignoredDrives.Any(i => i == t))) == false;
         
-                if (!keepRunning)
-                {
-                    Console.WriteLine("WHY?");
-                }
+                // if (!keepRunning)
+                // {
+                //     Console.WriteLine("WHY?");
+                // }
             }
         }
 
-        private async Task<Channel<ChiaPlotOutput>> startProcess(string destination, string temp) 
+        private async Task startProcess(string destination, string temp) 
         {
-            var destinationDrive = new DriveInfo(destination);
-            var tempDrive = new DriveInfo(temp);
+            // var destinationDrive = new DriveInfo(destination);
+            // var tempDrive = new DriveInfo(temp);
             await tempDriveCleanerDelegate.Invoke(temp);
             ChiaPlotEngine engine = null;
             var kSize = chiaPlotManagerContextConfiguration.KSizes.Where(k => k.K == "32").First();
@@ -282,7 +290,22 @@ namespace chia_plotter.Business.Infrastructure
                 kSize.Threads.ToString(),
                 processRepo
             ));
-            return await engine.Process();
+            var process = await engine.Process();
+            await foreach(var value in process.Reader.ReadAllAsync())
+            {
+                if (!string.IsNullOrWhiteSpace(value.Id))
+                {
+                    uniOutputs[value.Id] = value;
+                    break;
+                }
+            }
+            Task task = Task.Run(async () => {
+                await foreach(var value in process.Reader.ReadAllAsync())
+                {
+                    await outputChannel.Writer.WriteAsync(value);
+                }
+            });
+            runningTasks.Add(task);
         }
 
         // private async Task<Channel<ChiaPlotOutput>> startProcess(string destination, string temp) 
