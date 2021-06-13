@@ -127,10 +127,12 @@ namespace chia_plotter
                         K,
                         Ram,
                         Threads,
-                        processRepo
+                        processRepo,
+                        farmerPublicKey,
+                        poolPublicKey
                     ) => {
                         if (!testing) {
-                            return new ChiaPlotProcessChannel(temp, destination, K, Ram, Threads, processRepo);
+                            return new ChiaPlotProcessChannel(temp, destination, K, Ram, Threads, processRepo, farmerPublicKey, poolPublicKey);
                         } else {
                             return new ChiaPlotProcessChannelMock(temp, destination, K, Ram, Threads, processRepo);
                         }

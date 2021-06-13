@@ -17,7 +17,7 @@ namespace chia_plotter.Business.Infrastructure
     public class ChiaPlotsManager
     {
         private readonly ChiaPlotManagerContextConfiguration chiaPlotManagerContextConfiguration;
-        private readonly Func<string, string, string, string, string, ChiaPlotProcessRepository, IChiaPlotProcessChannel> chiaPlotProcessChannelFactory;
+        private readonly Func<string, string, string, string, string, ChiaPlotProcessRepository, string, string, IChiaPlotProcessChannel> chiaPlotProcessChannelFactory;
         private readonly Action<ICollection<ChiaPlotOutput>, StringBuilder> allOutputsDelegate;
         private readonly Func<string, Task> tempDriveCleanerDelegate;
         private readonly ILogger<ChiaPlotsManager> logger;
@@ -27,9 +27,9 @@ namespace chia_plotter.Business.Infrastructure
 
         private readonly ChiaPlotProcessRepository processRepo;
         public ChiaPlotsManager(
-            ChiaPlotManagerContextConfiguration chiaPlotManagerContextConfiguration, 
+            ChiaPlotManagerContextConfiguration chiaPlotManagerContextConfiguration,
             ChiaPlotProcessRepository processRepo,
-            Func<string, string, string, string, string, ChiaPlotProcessRepository, IChiaPlotProcessChannel> chiaPlotProcessChannelFactory,
+            Func<string, string, string, string, string, ChiaPlotProcessRepository, string, string, IChiaPlotProcessChannel> chiaPlotProcessChannelFactory,
             Action<ICollection<ChiaPlotOutput>, StringBuilder> allOutputsDelegate,
             Func<string, Task> tempDriveCleanerDelegate,
             ILogger<ChiaPlotsManager> logger
@@ -288,7 +288,9 @@ namespace chia_plotter.Business.Infrastructure
                 kSize.K,
                 kSize.Ram.ToString(),
                 kSize.Threads.ToString(),
-                processRepo
+                processRepo,
+                chiaPlotManagerContextConfiguration.FarmerPublicKey,
+                chiaPlotManagerContextConfiguration.PoolPublicKey
             ));
             var process = await engine.Process();
             await foreach(var value in process.Reader.ReadAllAsync())

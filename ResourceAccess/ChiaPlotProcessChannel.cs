@@ -13,8 +13,18 @@ namespace chia_plotter.ResourceAccess.Infrastructure
         private readonly string ram;
         private readonly string threads;
         private readonly ChiaPlotProcessRepository processRepo;
+        private readonly string farmerPublicKey;
+        private readonly string poolPublicKey;
 
-        public ChiaPlotProcessChannel(string tempDrive, string destDrive, string kSize, string ram, string threads, ChiaPlotProcessRepository processRepo)
+        public ChiaPlotProcessChannel(
+            string tempDrive, 
+            string destDrive, 
+            string kSize, 
+            string ram, 
+            string threads, 
+            ChiaPlotProcessRepository processRepo,
+            string farmerPublicKey,
+            string poolPublicKey)
         {
             this.tempDrive = tempDrive;
             this.destDrive = destDrive;
@@ -22,6 +32,8 @@ namespace chia_plotter.ResourceAccess.Infrastructure
             this.ram = ram;
             this.threads = threads;
             this.processRepo = processRepo;
+            this.farmerPublicKey = farmerPublicKey;
+            this.poolPublicKey = poolPublicKey;
         }
 
         public async Task<ChannelReader<string>> Get()
@@ -45,7 +57,7 @@ namespace chia_plotter.ResourceAccess.Infrastructure
             await channel.Writer.WriteAsync($"PROCESSID:{process.Id}");
             process.StandardInput.WriteLine("cd ~/chia-blockchain");
             process.StandardInput.WriteLine(". ./activate");
-            process.StandardInput.WriteLine($"chia plots create -k {kSize} -r {threads} -b {ram} -t {tempDrive} -2 {tempDrive} -d {destDrive} -x");
+            process.StandardInput.WriteLine($"chia plots create -k {kSize} -r {threads} -b {ram} -t {tempDrive} -2 {tempDrive} -d {destDrive} -x -f {farmerPublicKey} -p {poolPublicKey}");
             process.BeginOutputReadLine();
 
             return channel;

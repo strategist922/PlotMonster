@@ -12,6 +12,8 @@ namespace chia_plotter.Business.Infrastructure
         public List<string> DestinationPlotDrives {get;set;}
         public bool ExternalPlotTransferProcess {get;set;}
         public List<KSizeMetadata> KSizes {get;set;}
+        public string FarmerPublicKey {get;set;}
+        public string PoolPublicKey {get;set;}
     }
 
 }

@@ -19,6 +19,8 @@
                 "Threads": 2, 
                 "Ram": 4000
             } 
-        ]
+        ],
+        "FarmerPublicKey": "",
+        "PoolPublicKey": ""
     }
 }
