@@ -7,5 +7,4 @@ namespace chia_plotter.ResourceAccess.Abstraction
     {
         Task<ChannelReader<string>> Get();
     }
-    
 }

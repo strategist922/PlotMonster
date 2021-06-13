@@ -14,6 +14,7 @@ namespace chia_plotter.Business.Infrastructure
             this.repository = repository;
         }
 
+// TODO - extend on this to provide more knowledge (phase steps and completion times) about each phases progress.  That knowledge will then allow downstream to calculate progress percentage based on the average plot time.
         public async Task<Channel<ChiaPlotOutput>> Process()
         {
             var channel = await repository.Get();
