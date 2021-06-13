@@ -53,7 +53,7 @@ namespace chia_plotter.Business.Infrastructure
             // var uniqueOutputs = new Dictionary<string, ChiaPlotOutput>();
             var ignoredDrives = new List<string>();
             var staticText = new StringBuilder();
-            var maxParallelPlotsPerStagger = 4;
+            // var maxParallelPlotsPerStagger = 4;
             // initialization process to start 2 plots per temp drive
             // don't ignore plot drives but do check plot drives are not on the ignoreDrives list.  This will allow us to have the same temp and dest drive and ignore when full.
 // where do I add the logic to stagger?
@@ -211,8 +211,8 @@ namespace chia_plotter.Business.Infrastructure
                         // this isn't going to work unless there is another related temp drive that emits since there is a huge delay between the plot completed output and the transfer completed output.  This is going to become another feature that returns the next available resource to start a process.  so the client periodically checks for the next process and then calls the plot registration feature. need a scheduler and check every 60 seconds. initally it will check faster until it gets a null response and then increase the time. needed so it doesn't rely on the natural output.  This also fixes the first plot problem where if we never get a message, how do we know what to start?  chicken or egg, no longer.
                         if (remaining.Count() < chiaPlotManagerContextConfiguration.PlotsPerDrive
                             && remaining
-                                .Where(o => string.IsNullOrWhiteSpace(o.CurrentPhase) || (o.CurrentPhase == "1"))
-                                    .Count() < maxParallelPlotsPerStagger)
+                                .Where(o => string.IsNullOrWhiteSpace(o.CurrentPhase) || (o.CurrentPhase == chiaPlotManagerContextConfiguration.StaggerAfterPhase))
+                                    .Count() < chiaPlotManagerContextConfiguration.PlotsPerStagger)
                         {
                             await startProcess(output.TempDrive, output.TempDrive);
                         }

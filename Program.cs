@@ -13,6 +13,7 @@ using Microsoft.Extensions.Configuration;
 using NLog.Extensions.Logging;
 using NLog;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace chia_plotter
 {
@@ -22,9 +23,10 @@ namespace chia_plotter
         {
             var config = new ConfigurationBuilder()
                 .SetBasePath(System.IO.Directory.GetCurrentDirectory())
-                .AddJsonFile("app-settings.json", optional: false, reloadOnChange: true)
+                .AddJsonFile("plot-settings.json", optional: false, reloadOnChange: true)
                 .Build();
-
+            services.Configure<ChiaPlotManagerContextConfiguration>(config.GetSection("PlotConfiguration"));
+            services.AddSingleton<IConfiguration>(config);
             // NLog.LogManager.LoadConfiguration("NLog.config");
             services.AddLogging(builder => {
                 
@@ -48,69 +50,73 @@ namespace chia_plotter
 
             var serviceCollection = new ServiceCollection();
             var serviceProvider = ConfigureServices(serviceCollection);
-
+            // var configuration = serviceProvider.GetRequiredService<IConfiguration>();
             var programLogger = serviceProvider.GetRequiredService<ILogger<Program>>();
             var chiaPlotsManagerLogger = serviceProvider.GetRequiredService<ILogger<ChiaPlotsManager>>();
             var baseDir = Directory.GetCurrentDirectory();
+            var config = serviceProvider.GetRequiredService<IOptions<ChiaPlotManagerContextConfiguration>>().Value;
             
             var repo = new ChiaPlotProcessRepository();
             try
             {
-                var config = new ChiaPlotManagerContextConfiguration();
-                config.PlotsPerDrive = 8;
-                config.TempPlotDrives = new List<string>() 
-                { 
-                    "/chia/plottemp1",
-                    "/chia/plottemp2",
-                    "/chia/plottemp3",
-                    "/chia/plottemp4",
-                };
-                config.DestinationPlotDrives = new List<string>() 
-                { 
-                    // "/chia/plots/100", 
-                    // "/chia/plots/101", 
-                    // "/chia/plots/102", 
-                    // "/chia/plots/103", 
-                    // "/chia/plots/104", 
-                    // "/chia/plots/105", 
-                    // "/chia/plots/106", 
-                    // "/chia/plots/107", 
-                    // "/chia/plots/108", 
-                    // "/chia/plots/109" 
-                    // "/chia/plots/200", 
-                    // "/chia/plots/201",
-                    // "/chia/plots/202",
-                    // "/chia/plots/203",
-                    // "/chia/plots/204",
-                    // "/chia/plots/206",
-                    // "/chia/plots/207",
-                    "/chia/plots/share/100",
-                    "/chia/plots/share/101",
-                    "/chia/plots/share/102",
-                    "/chia/plots/share/103",
-                    "/chia/plots/share/104",
-                    "/chia/plots/share/105",
-                    "/chia/plots/share/106",
-                    "/chia/plots/share/107",
-                    "/chia/plots/share/108",
-                    "/chia/plots/share/109",
-                    "/chia/plots/share/200",
-                    "/chia/plots/share/201",
-                    "/chia/plots/share/202",
-                    "/chia/plots/share/203",
-                    "/chia/plots/share/204",
-                    "/chia/plots/share/205",
-                    "/chia/plots/share/206",
-                    "/chia/plots/share/207",
-                    "/chia/plots/share/208",
-                    "/chia/plots/share/209"
-                };
-                config.KSizes = new List<KSizeMetadata>
-                { 
-                    // new KSizeMetadata { PlotSize = 408000000000, WorkSize = 1000000000, K = "34", Threads = 4, Ram = 8000 }, 
-                    // new KSizeMetadata { PlotSize = 208000000000, WorkSize = 550000000, K = "33", Threads = 4, Ram = 6000 }, 
-                    new KSizeMetadata { PlotSize = 108000000000, WorkSize = 280000000, K = "32", Threads = 2, Ram = 4000 } 
-                };
+                // config.PlotsPerDrive = 8;
+                // config.PlotsPerDrive = int.Parse(configuration["PlotsPerDrive"]);
+                // config.PlotsPerStagger = int.Parse(configuration["PlotsPerStagger"]);
+                // config.StaggerAfterPhase = configuration["StaggerAfterPhase"];
+                // config.TempPlotDrives = new List<string>() 
+                // { 
+                //     "/chia/plottemp1",
+                //     "/chia/plottemp2",
+                //     "/chia/plottemp3",
+                //     "/chia/plottemp4",
+                // };
+                // configuration.GetSection("TempDrives").Bind(config.TempPlotDrives);
+                // config.DestinationPlotDrives = new List<string>() 
+                // { 
+                //     // "/chia/plots/100", 
+                //     // "/chia/plots/101", 
+                //     // "/chia/plots/102", 
+                //     // "/chia/plots/103", 
+                //     // "/chia/plots/104", 
+                //     // "/chia/plots/105", 
+                //     // "/chia/plots/106", 
+                //     // "/chia/plots/107", 
+                //     // "/chia/plots/108", 
+                //     // "/chia/plots/109" 
+                //     // "/chia/plots/200", 
+                //     // "/chia/plots/201",
+                //     // "/chia/plots/202",
+                //     // "/chia/plots/203",
+                //     // "/chia/plots/204",
+                //     // "/chia/plots/206",
+                //     // "/chia/plots/207",
+                //     "/chia/plots/share/100",
+                //     "/chia/plots/share/101",
+                //     "/chia/plots/share/102",
+                //     "/chia/plots/share/103",
+                //     "/chia/plots/share/104",
+                //     "/chia/plots/share/105",
+                //     "/chia/plots/share/106",
+                //     "/chia/plots/share/107",
+                //     "/chia/plots/share/108",
+                //     "/chia/plots/share/109",
+                //     "/chia/plots/share/200",
+                //     "/chia/plots/share/201",
+                //     "/chia/plots/share/202",
+                //     "/chia/plots/share/203",
+                //     "/chia/plots/share/204",
+                //     "/chia/plots/share/205",
+                //     "/chia/plots/share/206",
+                //     "/chia/plots/share/207",
+                //     "/chia/plots/share/208",
+                //     "/chia/plots/share/209"
+                // };
+                // config.KSizes = new List<KSizeMetadata>
+                // { 
+                //     // new KSizeMetadata { PlotSize = 408000000000, WorkSize = 1000000000, K = "34", Threads = 4, Ram = 8000 }, 
+                //     // new KSizeMetadata { PlotSize = 208000000000, WorkSize = 550000000, K = "33", Threads = 4, Ram = 6000 }, 
+                //     new KSizeMetadata { PlotSize = 108000000000, WorkSize = 280000000, K = "32", Threads = 2, Ram = 4000 } 
+                // };
             
                 var manager = new ChiaPlotsManager(
                     config, 

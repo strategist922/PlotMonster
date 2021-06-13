@@ -4,3 +4,4 @@ bin/
 obj/
 .vscode/
 /notes.txt
+/plot-settings.json
